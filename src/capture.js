@@ -59,8 +59,7 @@ async function captureCanvas(url) {
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process'
       ],
-      executablePath: chromePath,
-      timeout: 60000
+      executablePath: chromePath
     });
 
     const page = await browser.newPage();
@@ -106,56 +105,15 @@ async function captureCanvas(url) {
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
     
-    // Try multiple navigation strategies
-    try {
-      console.log('Attempting first navigation strategy...');
-      await page.goto(url, { 
-        waitUntil: 'networkidle2',
-        timeout: 60000
-      });
-      console.log('Initial navigation completed');
-      
-      // Wait for additional time to ensure content is fully rendered
-      await page.waitForTimeout(3000);
-    } catch (error) {
-      console.log('First navigation attempt failed:', error.message);
-      throw error;
-    }
-
-    // Wait for either the main content or a reasonable amount of time
-    try {
-      console.log('Waiting for page content...');
-      await Promise.race([
-        page.waitForSelector('main', { timeout: 30000 }),
-        page.waitForSelector('body', { timeout: 30000 }),
-        page.waitForSelector('div[role="main"]', { timeout: 30000 }),
-        page.waitForSelector('article', { timeout: 30000 }),
-        new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds as fallback
-      ]);
-      console.log('Page content detected');
-    } catch (error) {
-      console.log('No specific selectors found, but page might still be loaded');
-    }
-
-    // Check page dimensions
-    const dimensions = await page.evaluate(() => {
-      return {
-        width: document.documentElement.clientWidth,
-        height: document.documentElement.clientHeight,
-        scrollHeight: document.documentElement.scrollHeight,
-        scrollWidth: document.documentElement.scrollWidth,
-      };
+    // Navigate to the page and wait for it to load
+    await page.goto(url, { 
+      waitUntil: 'networkidle0'
     });
-    console.log('Page dimensions:', dimensions);
-
-    // Check if the page has any content
-    const hasContent = await page.evaluate(() => {
-      return document.body && document.body.innerHTML.length > 0;
-    });
+    console.log('Page loaded');
     
-    if (!hasContent) {
-      throw new Error('Page appears to be empty');
-    }
+    // Wait for the main content to be visible
+    await page.waitForSelector('.slide', { timeout: 10000 });
+    console.log('Presentation content detected');
     
     // Ensure static directory exists
     const staticDir = path.join(process.cwd(), 'static');
@@ -170,18 +128,13 @@ async function captureCanvas(url) {
     
     // Take screenshot
     console.log('Taking screenshot...');
-    try {
-      await page.screenshot({
-        path: screenshotPath,
-        type: 'jpeg',
-        quality: 90,
-        fullPage: true
-      });
-      console.log('Screenshot captured successfully');
-    } catch (screenshotError) {
-      console.error('Screenshot failed:', screenshotError);
-      throw screenshotError;
-    }
+    await page.screenshot({
+      path: screenshotPath,
+      type: 'jpeg',
+      quality: 90,
+      fullPage: true
+    });
+    console.log('Screenshot captured successfully');
     
     // Convert to PDF with improved settings
     console.log('Converting to PDF...');
