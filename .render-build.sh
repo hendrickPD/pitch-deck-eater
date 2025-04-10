@@ -5,9 +5,9 @@ set -o errexit
 echo "Current directory: $(pwd)"
 echo "Current user: $(whoami)"
 
-# Set up cache directory
+# Set up cache directory in project directory
 echo "Setting up cache directory..."
-CACHE_DIR="/opt/render/.cache/puppeteer"
+CACHE_DIR="/opt/render/project/src/.cache/puppeteer"
 mkdir -p $CACHE_DIR
 chmod -R 777 $CACHE_DIR
 export PUPPETEER_CACHE_DIR=$CACHE_DIR
