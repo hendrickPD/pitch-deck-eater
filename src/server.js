@@ -1,41 +1,19 @@
-const express = require('express');
-const { App, ExpressReceiver } = require('@slack/bolt');
-const { capturePitchDeck } = require('./capture');
+const { App } = require('@slack/bolt');
 const { handleMessage } = require('./bot');
 
-const port = process.env.PORT || 3000;
-
-// Create an ExpressReceiver
-const expressReceiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  endpoints: '/slack/events'
-});
-
-// Create an Express app
-const app = express();
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
-// Initialize Slack app
-const slackApp = new App({
+const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  receiver: expressReceiver
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  socketMode: false
 });
 
 // Handle Slack events
-slackApp.message(handleMessage);
+app.message(handleMessage);
 
-// Use the ExpressReceiver's router
-app.use(expressReceiver.router);
-
-// Start the server
+// Start the app
 (async () => {
-  await slackApp.start();
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    console.log('Slack app is running!');
-  });
+  // Use the PORT environment variable provided by Render
+  const port = process.env.PORT || 10000;
+  await app.start(port);
+  console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
 })(); 
