@@ -33,9 +33,20 @@ const app = new App({
   receiver
 });
 
+// Message deduplication cache
+const processedMessages = new Set();
+
 // Handle Slack events
 app.event('message', async ({ event, client }) => {
   try {
+    // Check if we've already processed this message
+    const messageKey = `${event.channel}_${event.ts}`;
+    if (processedMessages.has(messageKey)) {
+      console.log('Skipping duplicate message:', messageKey);
+      return;
+    }
+    processedMessages.add(messageKey);
+
     // Log the full event for debugging
     console.log('Received message event:', JSON.stringify(event, null, 2));
 
@@ -68,7 +79,7 @@ app.event('message', async ({ event, client }) => {
       // Upload the combined PDF to Slack
       try {
         const pdfResult = await client.files.uploadV2({
-          channels: event.channel,
+          channel_id: event.channel,
           file: await fs.readFile(pdfPath),
           filename: 'canvas.pdf',
           title: 'Canvas PDF'
