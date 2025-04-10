@@ -15,12 +15,22 @@ async function captureCanvas(url) {
 
   try {
     // Check cache directory
-    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/src/.cache/puppeteer';
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/.cache/puppeteer';
     try {
       await fs.mkdir(cacheDir, { recursive: true });
       console.log('Cache directory created/exists:', cacheDir);
       const contents = await fs.readdir(cacheDir);
       console.log('Cache directory contents:', contents);
+      
+      // Check for Chrome binary
+      const chromePath = path.join(cacheDir, 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
+      try {
+        const stats = await fs.stat(chromePath);
+        console.log('Chrome binary found at:', chromePath);
+        console.log('Chrome binary size:', stats.size);
+      } catch (error) {
+        console.error('Chrome binary not found at:', chromePath);
+      }
     } catch (error) {
       console.error('Error with cache directory:', error.message);
     }

@@ -5,9 +5,9 @@ set -o errexit
 echo "Current directory: $(pwd)"
 echo "Current user: $(whoami)"
 
-# Set up cache directory in the project directory
+# Set up cache directory
 echo "Setting up cache directory..."
-CACHE_DIR="/opt/render/project/src/.cache/puppeteer"
+CACHE_DIR="/opt/render/.cache/puppeteer"
 mkdir -p $CACHE_DIR
 chmod -R 777 $CACHE_DIR
 export PUPPETEER_CACHE_DIR=$CACHE_DIR
@@ -26,5 +26,8 @@ echo "Environment information:"
 echo "PUPPETEER_CACHE_DIR=$PUPPETEER_CACHE_DIR"
 echo "Directory contents:"
 ls -la $PUPPETEER_CACHE_DIR
+
+# Create a .env file with the cache directory
+echo "PUPPETEER_CACHE_DIR=$CACHE_DIR" > .env
 
 echo "Build script completed." 
