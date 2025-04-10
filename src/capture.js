@@ -5,19 +5,7 @@ const fs = require('fs').promises;
 async function captureCanvas(url) {
   console.log('Launching browser...');
   
-  // Set cache directory
-  process.env.PUPPETEER_CACHE_DIR = path.join(process.cwd(), '.cache', 'puppeteer');
-  
-  // Ensure cache directory exists
-  await fs.mkdir(process.env.PUPPETEER_CACHE_DIR, { recursive: true });
-  console.log('Using cache directory:', process.env.PUPPETEER_CACHE_DIR);
-  
   try {
-    // Try to find Chrome installation
-    const browserFetcher = puppeteer.createBrowserFetcher();
-    const revisionInfo = await browserFetcher.download();
-    console.log('Chrome downloaded to:', revisionInfo.folderPath);
-    
     const browser = await puppeteer.launch({
       headless: 'new',
       args: [
@@ -26,9 +14,7 @@ async function captureCanvas(url) {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--headless'
-      ],
-      // Use the downloaded Chrome
-      executablePath: revisionInfo.executablePath
+      ]
     });
 
     try {
@@ -90,14 +76,11 @@ async function captureCanvas(url) {
     }
   } catch (error) {
     console.error('Error during capture:', error);
-    if (error.message.includes('Could not find Chrome')) {
-      console.log('Chrome installation details:');
-      console.log('- Cache directory:', process.env.PUPPETEER_CACHE_DIR);
-      console.log('- Current directory:', process.cwd());
-      console.log('- User:', process.env.USER);
-      console.log('- Platform:', process.platform);
-      console.log('- Architecture:', process.arch);
-    }
+    console.log('Environment details:');
+    console.log('- Current directory:', process.cwd());
+    console.log('- User:', process.env.USER);
+    console.log('- Platform:', process.platform);
+    console.log('- Architecture:', process.arch);
     throw error;
   }
 }

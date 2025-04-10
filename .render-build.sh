@@ -16,7 +16,7 @@ npm install
 
 # Install Chrome
 echo "Installing Chrome..."
-npx puppeteer browsers install chrome
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install puppeteer
 
 # Verify Chrome installation
 echo "Verifying Chrome installation..."
