@@ -2,10 +2,10 @@
   "name": "pitch-deck-eater",
   "version": "1.0.0",
   "description": "Slack bot for capturing Pitch/Miro canvas screenshots",
-  "main": "src/bot.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/bot.js",
-    "dev": "nodemon src/bot.js"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "dependencies": {
     "@slack/bolt": "^3.22.0",
