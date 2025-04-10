@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
 
+// Helper function for delay
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function captureCanvas(url) {
   let browser;
   try {
@@ -123,7 +126,7 @@ async function captureCanvas(url) {
     
     // Wait a short time for dynamic content to render
     console.log('Waiting for dynamic content...');
-    await page.waitForTimeout(2000);
+    await delay(2000);
     
     // Wait for the main content to be visible
     console.log('Waiting for presentation content...');
