@@ -1,11 +1,11 @@
-const { App } = require('@slack/bolt');
+const { App, ExpressReceiver } = require('@slack/bolt');
 const { captureCanvas } = require('./capture');
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 
 // Validate required environment variables
-const requiredEnvVars = ['SLACK_BOT_TOKEN', 'SLACK_SIGNING_SECRET', 'SLACK_APP_TOKEN'];
+const requiredEnvVars = ['SLACK_BOT_TOKEN', 'SLACK_SIGNING_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -13,20 +13,24 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-// Initialize the Slack app
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
+// Initialize the receiver
+const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
-  socketMode: true,
-  appToken: process.env.SLACK_APP_TOKEN
+  processBeforeResponse: true
 });
 
 // Initialize Express
-const expressApp = express();
+const expressApp = receiver.app;
 expressApp.use(express.json());
 
 // Serve static files
 expressApp.use('/static', express.static(path.join(__dirname, '..', 'static')));
+
+// Initialize Slack app with the receiver
+const app = new App({
+  token: process.env.SLACK_BOT_TOKEN,
+  receiver
+});
 
 // Handle Slack events
 app.event('message', async ({ event, client }) => {
@@ -88,28 +92,20 @@ app.event('message', async ({ event, client }) => {
   }
 });
 
-// Start the Express server
-const PORT = process.env.PORT || 3000;
-expressApp.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-// Start the Slack app
+// Start the app
 (async () => {
   try {
-    await app.start();
-    console.log('Slack app is running in Socket Mode!');
+    const port = process.env.PORT || 3000;
+    await app.start(port);
+    console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
     
-    // Verify app token
+    // Verify bot token
     const authTest = await app.client.auth.test();
     console.log('Bot User ID:', authTest.bot_id);
     console.log('Bot User Name:', authTest.user);
     console.log('Team Name:', authTest.team);
   } catch (error) {
-    console.error('Failed to start Slack app:', error);
-    if (error.message.includes('app token')) {
-      console.error('Please ensure SLACK_APP_TOKEN is set correctly with the xapp- prefix');
-    }
+    console.error('Failed to start the app:', error);
     process.exit(1);
   }
 })(); 
