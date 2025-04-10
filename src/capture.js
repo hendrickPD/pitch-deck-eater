@@ -27,7 +27,7 @@ async function captureCanvas(url) {
   
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath,
+    executablePath: '/usr/bin/google-chrome',  // Use explicit path
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
