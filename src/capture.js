@@ -1,13 +1,28 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs').promises;
+const { execSync } = require('child_process');
 
 async function captureCanvas(url) {
+  const chromePath = '/usr/bin/google-chrome';
   console.log('Launching browser...');
+
+  // Verify Chrome exists
+  try {
+    await fs.access(chromePath);
+    console.log('Chrome exists at:', chromePath);
+    
+    // Try to get Chrome version
+    const version = execSync(`${chromePath} --version`).toString();
+    console.log('Chrome version:', version);
+  } catch (error) {
+    console.error('Error verifying Chrome:', error.message);
+    throw new Error(`Chrome verification failed: ${error.message}`);
+  }
   
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: '/usr/bin/google-chrome',
+    executablePath: chromePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
