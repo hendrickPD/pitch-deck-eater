@@ -65,10 +65,10 @@ async function captureCanvas(url) {
 
     const page = await browser.newPage();
     
-    // Set desktop viewport
+    // Set desktop viewport with increased width
     await page.setViewport({
-      width: 1920,
-      height: 1080,
+      width: 2560,  // Increased width for better capture
+      height: 1440, // Increased height proportionally
       deviceScaleFactor: 2
     });
 
@@ -146,14 +146,16 @@ async function captureCanvas(url) {
       fullPage: true
     });
     
-    // Convert to PDF
+    // Convert to PDF with improved settings
     console.log('Converting to PDF...');
     await page.pdf({
       path: pdfPath,
-      format: 'A4',
       printBackground: true,
+      landscape: true,
+      width: '2560px',
+      height: '1440px',
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
-      scale: 0.8
+      scale: 1
     });
     
     console.log('Closing browser...');
