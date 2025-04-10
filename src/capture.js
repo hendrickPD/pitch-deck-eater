@@ -15,7 +15,7 @@ async function captureCanvas(url) {
 
   try {
     // Check cache directory
-    const cacheDir = process.env.PUPPETEER_CACHE_DIR || path.join(process.cwd(), '.cache', 'puppeteer');
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/src/.cache/puppeteer';
     try {
       await fs.mkdir(cacheDir, { recursive: true });
       console.log('Cache directory created/exists:', cacheDir);

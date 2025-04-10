@@ -7,7 +7,7 @@ echo "Current user: $(whoami)"
 
 # Set up cache directory in the project directory
 echo "Setting up cache directory..."
-CACHE_DIR="$PWD/.cache/puppeteer"
+CACHE_DIR="/opt/render/project/src/.cache/puppeteer"
 mkdir -p $CACHE_DIR
 chmod -R 777 $CACHE_DIR
 export PUPPETEER_CACHE_DIR=$CACHE_DIR
@@ -15,10 +15,6 @@ export PUPPETEER_CACHE_DIR=$CACHE_DIR
 # Install dependencies
 echo "Installing Node dependencies..."
 npm install
-
-# Install Chrome
-echo "Installing Chrome..."
-npx puppeteer browsers install chrome
 
 # Verify Chrome installation
 echo "Verifying Chrome installation..."
