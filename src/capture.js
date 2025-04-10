@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 
 async function captureCanvas(url) {
+  // Get the Chrome executable path from cache
   const browser = await puppeteer.launch({
     headless: 'new',
     args: [
@@ -12,7 +13,8 @@ async function captureCanvas(url) {
       '--disable-accelerated-2d-canvas',
       '--disable-gpu',
       '--window-size=1920x1080'
-    ]
+    ],
+    channel: 'chrome'
   });
 
   try {
