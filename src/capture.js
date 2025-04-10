@@ -1,19 +1,39 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs').promises;
+const { execSync } = require('child_process');
 
 async function captureCanvas(url) {
   console.log('Launching browser...');
-  console.log('Chrome path:', process.env.PUPPETEER_EXECUTABLE_PATH);
+  
+  // Check if Chrome is installed
+  try {
+    const chromeVersion = execSync('google-chrome --version').toString();
+    console.log('Chrome version:', chromeVersion);
+  } catch (error) {
+    console.error('Error checking Chrome version:', error);
+  }
+
+  // Check executable path
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
+  console.log('Chrome executable path:', executablePath);
+  
+  try {
+    const stats = await fs.stat(executablePath);
+    console.log('Chrome executable exists:', stats.isFile());
+  } catch (error) {
+    console.error('Error checking Chrome executable:', error);
+  }
   
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-software-rasterizer'
     ]
   });
 
