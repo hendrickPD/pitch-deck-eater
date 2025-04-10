@@ -5,8 +5,9 @@ services:
     plan: free
     region: oregon  # Specify a region close to your users
     buildCommand: |
+      apt-get update
+      apt-get install -y chromium
       npm install
-      npm run build
     startCommand: npm start
     healthCheckPath: /health  # Add a health check endpoint
     autoDeploy: true  # Enable automatic deployments
@@ -25,4 +26,4 @@ services:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: "true"
       - key: PUPPETEER_EXECUTABLE_PATH
-        value: "/usr/bin/google-chrome" 
+        value: "/usr/bin/chromium" 
