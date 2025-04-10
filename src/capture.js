@@ -143,7 +143,13 @@ async function captureCanvas(url) {
       path: screenshotPath,
       type: 'jpeg',
       quality: 90,
-      fullPage: true
+      fullPage: true,
+      clip: {
+        x: 0,
+        y: 0,
+        width: 3840,
+        height: 2160
+      }
     });
     
     // Convert to PDF with improved settings
