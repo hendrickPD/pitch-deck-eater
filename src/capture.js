@@ -6,28 +6,39 @@ const { execSync } = require('child_process');
 async function captureCanvas(url) {
   console.log('Launching browser...');
   
-  // Check if Chrome is installed
+  // Check Chrome installation
   try {
-    const chromeVersion = execSync('google-chrome --version').toString();
-    console.log('Chrome version:', chromeVersion);
+    const chromeVersion = execSync('which google-chrome').toString();
+    console.log('Chrome binary location:', chromeVersion);
+    const version = execSync('google-chrome --version').toString();
+    console.log('Chrome version:', version);
   } catch (error) {
-    console.error('Error checking Chrome version:', error);
+    console.error('Error checking Chrome:', error.message);
+  }
+
+  // List contents of /usr/bin to debug
+  try {
+    const binContents = execSync('ls -l /usr/bin/google*').toString();
+    console.log('/usr/bin contents:', binContents);
+  } catch (error) {
+    console.error('Error listing /usr/bin:', error.message);
   }
 
   // Check executable path
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome';
-  console.log('Chrome executable path:', executablePath);
+  const executablePath = '/usr/bin/google-chrome';
+  console.log('Using Chrome path:', executablePath);
   
   try {
     const stats = await fs.stat(executablePath);
     console.log('Chrome executable exists:', stats.isFile());
+    console.log('File permissions:', (await fs.stat(executablePath)).mode.toString(8));
   } catch (error) {
-    console.error('Error checking Chrome executable:', error);
+    console.error('Error checking Chrome executable:', error.message);
   }
   
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: '/usr/bin/google-chrome',  // Use explicit path
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
