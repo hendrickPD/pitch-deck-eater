@@ -3,15 +3,15 @@ const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
 
-async function findChrome() {
+async function findBrowser() {
   const possiblePaths = [
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
     '/usr/bin/chromium',
-    '/usr/bin/chromium-browser'
+    '/usr/bin/chromium-browser',
+    '/usr/lib/chromium/chromium',
+    '/usr/lib/chromium-browser/chromium-browser'
   ];
 
-  console.log('Searching for Chrome...');
+  console.log('Searching for Chromium...');
   
   for (const browserPath of possiblePaths) {
     try {
@@ -23,7 +23,7 @@ async function findChrome() {
     }
   }
 
-  throw new Error('No Chrome installation found');
+  throw new Error('No Chromium installation found');
 }
 
 async function captureCanvas(url) {
@@ -32,25 +32,25 @@ async function captureCanvas(url) {
   // Debug system info
   try {
     console.log('System info:', execSync('uname -a').toString());
-    console.log('Directory contents:', execSync('ls -la /usr/bin/').toString());
+    console.log('Directory contents:', execSync('ls -la /usr/bin/chromium*').toString());
   } catch (error) {
     console.error('Error getting system info:', error.message);
   }
 
-  // Find Chrome
-  const executablePath = await findChrome();
-  console.log('Using Chrome path:', executablePath);
+  // Find browser
+  const executablePath = await findBrowser();
+  console.log('Using browser path:', executablePath);
   
   try {
     const stats = await fs.stat(executablePath);
-    console.log('Chrome executable exists:', stats.isFile());
+    console.log('Browser executable exists:', stats.isFile());
     console.log('File permissions:', stats.mode.toString(8));
     
-    // Try to run Chrome
+    // Try to run browser
     const version = execSync(`${executablePath} --version`).toString();
-    console.log('Chrome version:', version);
+    console.log('Browser version:', version);
   } catch (error) {
-    console.error('Error checking Chrome:', error.message);
+    console.error('Error checking browser:', error.message);
   }
   
   const browser = await puppeteer.launch({
