@@ -29,22 +29,36 @@ expressApp.use('/static', express.static(path.join(__dirname, '..', 'static')));
 // Initialize Slack app with the receiver
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
   receiver
 });
 
 // Handle Slack events
 app.event('message', async ({ event, client }) => {
   try {
+    // Log the full event for debugging
+    console.log('Received message event:', JSON.stringify(event, null, 2));
+
+    // Get the message text, handling different message types
+    const messageText = event.text || event.message?.text || '';
+    console.log('Message text:', messageText);
+
     // Check if the message contains a Pitch or Miro link
     const pitchRegex = /https:\/\/pitch\.com\/[^\s]+/;
     const miroRegex = /https:\/\/(?:miro\.com|miro\.app)\/[^\s]+/;
     
-    const pitchMatch = event.text.match(pitchRegex);
-    const miroMatch = event.text.match(miroRegex);
+    const pitchMatch = messageText.match(pitchRegex);
+    const miroMatch = messageText.match(miroRegex);
     
     if (pitchMatch || miroMatch) {
       const url = pitchMatch ? pitchMatch[0] : miroMatch[0];
       console.log('Processing URL:', url);
+      
+      // Send initial response
+      await client.chat.postMessage({
+        channel: event.channel,
+        text: "I'll capture that canvas for you! Processing... 🎨"
+      });
       
       // Capture the canvas
       const { screenshotPath, pdfPath } = await captureCanvas(url);
