@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "build": "echo 'No build step required'"
+    "build": "echo 'No build step required'",
+    "postinstall": "node node_modules/puppeteer/install.js"
   },
   "dependencies": {
     "@slack/bolt": "^3.22.0",
