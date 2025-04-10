@@ -67,8 +67,8 @@ async function captureCanvas(url) {
     
     // Set desktop viewport with increased width
     await page.setViewport({
-      width: 2560,  // Increased width for better capture
-      height: 1440, // Increased height proportionally
+      width: 3840,  // Ultra-wide viewport
+      height: 2160, // 4K height
       deviceScaleFactor: 2
     });
 
@@ -152,10 +152,11 @@ async function captureCanvas(url) {
       path: pdfPath,
       printBackground: true,
       landscape: true,
-      width: '2560px',
-      height: '1440px',
+      width: '3840px',
+      height: '2160px',
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
-      scale: 1
+      scale: 1,
+      preferCSSPageSize: true
     });
     
     console.log('Closing browser...');
