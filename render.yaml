@@ -6,7 +6,7 @@ services:
     region: oregon  # Specify a region close to your users
     buildCommand: |
       sudo apt-get update
-      sudo apt-get install -y chromium
+      sudo apt-get install -y chromium-browser
       npm install
     startCommand: npm start
     healthCheckPath: /health  # Add a health check endpoint
@@ -22,4 +22,4 @@ services:
       - key: SLACK_SIGNING_SECRET
         sync: false
       - key: PUPPETEER_EXECUTABLE_PATH
-        value: "/usr/bin/chromium" 
+        value: "/usr/bin/chromium-browser" 
