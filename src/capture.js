@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs').promises;
+const { execSync } = require('child_process');
 
 async function captureCanvas(url) {
   let browser;
@@ -14,10 +15,11 @@ async function captureCanvas(url) {
     console.log('- Architecture:', process.arch);
 
     // Set up cache directory
-    const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || path.join(process.cwd(), '.cache', 'puppeteer');
     console.log('Cache directory created/exists:', cacheDir);
     
     try {
+      await fs.mkdir(cacheDir, { recursive: true });
       const contents = await fs.readdir(cacheDir);
       console.log('Cache directory contents:', contents);
     } catch (err) {
@@ -26,8 +28,23 @@ async function captureCanvas(url) {
 
     // Check for Chrome binary
     const chromePath = path.join(cacheDir, 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
-    console.log('Chrome binary not found at:', chromePath);
-    console.log('Attempting to install Chrome...');
+    console.log('Checking Chrome binary at:', chromePath);
+    
+    try {
+      await fs.access(chromePath);
+      console.log('Chrome binary found at:', chromePath);
+    } catch (error) {
+      console.log('Chrome binary not found, attempting to install...');
+      try {
+        // Set the cache directory for the installation
+        process.env.PUPPETEER_CACHE_DIR = cacheDir;
+        execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+        console.log('Chrome installation completed');
+      } catch (installError) {
+        console.error('Failed to install Chrome:', installError.message);
+        throw new Error('Chrome installation failed: ' + installError.message);
+      }
+    }
 
     // Launch browser with specific arguments
     browser = await puppeteer.launch({
@@ -40,7 +57,7 @@ async function captureCanvas(url) {
         '--disable-gpu',
         '--window-size=1920,1080'
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+      executablePath: chromePath
     });
 
     const page = await browser.newPage();
