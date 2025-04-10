@@ -16,19 +16,21 @@ const slackApp = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   socketMode: false,
-  appToken: process.env.SLACK_APP_TOKEN
+  appToken: process.env.SLACK_APP_TOKEN,
+  // Use the Express app as the receiver
+  receiver: {
+    app: app
+  }
 });
 
 // Handle Slack events
 slackApp.message(handleMessage);
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-// Start the Slack app
 (async () => {
   await slackApp.start();
-  console.log('Slack app is running!');
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+    console.log('Slack app is running!');
+  });
 })(); 
