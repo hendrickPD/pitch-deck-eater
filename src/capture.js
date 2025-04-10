@@ -13,7 +13,7 @@ async function captureCanvas(url) {
       '--disable-gpu',
       '--window-size=1920x1080'
     ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome'
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium'
   });
 
   try {

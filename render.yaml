@@ -5,8 +5,8 @@ services:
     plan: free
     region: oregon  # Specify a region close to your users
     buildCommand: |
-      apt-get update
-      apt-get install -y chromium
+      sudo apt-get update
+      sudo apt-get install -y chromium chromium-common
       npm install
     startCommand: npm start
     healthCheckPath: /health  # Add a health check endpoint
