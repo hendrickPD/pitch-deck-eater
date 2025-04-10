@@ -4,6 +4,15 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 
+// Validate required environment variables
+const requiredEnvVars = ['SLACK_BOT_TOKEN', 'SLACK_SIGNING_SECRET', 'SLACK_APP_TOKEN'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error('Missing required environment variables:', missingEnvVars);
+  process.exit(1);
+}
+
 // Initialize the Slack app
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -87,6 +96,20 @@ expressApp.listen(PORT, () => {
 
 // Start the Slack app
 (async () => {
-  await app.start();
-  console.log('Slack app is running!');
+  try {
+    await app.start();
+    console.log('Slack app is running in Socket Mode!');
+    
+    // Verify app token
+    const authTest = await app.client.auth.test();
+    console.log('Bot User ID:', authTest.bot_id);
+    console.log('Bot User Name:', authTest.user);
+    console.log('Team Name:', authTest.team);
+  } catch (error) {
+    console.error('Failed to start Slack app:', error);
+    if (error.message.includes('app token')) {
+      console.error('Please ensure SLACK_APP_TOKEN is set correctly with the xapp- prefix');
+    }
+    process.exit(1);
+  }
 })(); 
