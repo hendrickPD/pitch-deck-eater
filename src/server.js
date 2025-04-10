@@ -1,28 +1,32 @@
-const { App } = require('@slack/bolt');
-const express = require('express');
+const { App, ExpressReceiver } = require('@slack/bolt');
 
-// Initialize Express app
-const expressApp = express();
+// Initialize the receiver
+const receiver = new ExpressReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  processBeforeResponse: true,
+});
+
+// Get the Express app
+const app = receiver.app;
 
 // Health check endpoint
-expressApp.get('/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.send('OK');
 });
 
 // Root endpoint
-expressApp.get('/', (req, res) => {
+app.get('/', (req, res) => {
   res.send('Pitch Deck Eater is running! 🎨');
 });
 
-// Initialize Slack app
-const app = new App({
+// Initialize Slack app with the receiver
+const slackApp = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  socketMode: false
+  receiver
 });
 
 // Handle Slack events
-app.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
+slackApp.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
   try {
     await say(`I see you shared a canvas link! I'll work on capturing that soon. 🎨`);
   } catch (error) {
@@ -34,13 +38,6 @@ app.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
 // Start the app
 (async () => {
   const port = process.env.PORT || 3000;
-  
-  // Start the app
-  await app.start(port);
+  await slackApp.start(port);
   console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
-  
-  // Start Express server
-  expressApp.listen(port, () => {
-    console.log(`Express server is running on port ${port}`);
-  });
 })(); 
