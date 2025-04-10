@@ -46,6 +46,7 @@ async function captureCanvas(url) {
       }
     }
 
+    console.log('Launching browser...');
     // Launch browser with specific arguments
     browser = await puppeteer.launch({
       headless: 'new',
@@ -61,20 +62,28 @@ async function captureCanvas(url) {
       ],
       executablePath: chromePath
     });
+    console.log('Browser launched successfully');
 
+    console.log('Creating new page...');
     const page = await browser.newPage();
+    console.log('New page created');
     
     // Set desktop viewport with increased width
+    console.log('Setting viewport...');
     await page.setViewport({
       width: 3840,  // Ultra-wide viewport
       height: 2160, // 4K height
       deviceScaleFactor: 2
     });
+    console.log('Viewport set');
 
     // Set desktop user agent
+    console.log('Setting user agent...');
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
+    console.log('User agent set');
 
     // Disable animations and transitions
+    console.log('Disabling animations...');
     await page.evaluate(() => {
       const style = document.createElement('style');
       style.type = 'text/css';
@@ -90,8 +99,10 @@ async function captureCanvas(url) {
       `;
       document.head.appendChild(style);
     });
+    console.log('Animations disabled');
 
     // Enable request interception to log network activity
+    console.log('Setting up request interception...');
     await page.setRequestInterception(true);
     page.on('request', request => {
       console.log('Request:', request.method(), request.url());
@@ -101,10 +112,9 @@ async function captureCanvas(url) {
     page.on('response', response => {
       console.log('Response:', response.status(), response.url());
     });
+    console.log('Request interception set up');
 
-    console.log('Creating new page...');
     console.log('Navigating to URL:', url);
-    
     // Navigate to the page and wait for it to load
     await page.goto(url, { 
       waitUntil: 'networkidle0'
@@ -112,12 +122,15 @@ async function captureCanvas(url) {
     console.log('Page loaded');
     
     // Wait for the main content to be visible
+    console.log('Waiting for presentation content...');
     await page.waitForSelector('.slide', { timeout: 10000 });
     console.log('Presentation content detected');
     
     // Ensure static directory exists
+    console.log('Creating static directory...');
     const staticDir = path.join(process.cwd(), 'static');
     await fs.mkdir(staticDir, { recursive: true });
+    console.log('Static directory ready');
     
     // Extract filename from URL
     const urlParts = url.split('/');
@@ -148,9 +161,11 @@ async function captureCanvas(url) {
       scale: 1,
       preferCSSPageSize: true
     });
+    console.log('PDF conversion completed');
     
     console.log('Closing browser...');
     await browser.close();
+    console.log('Browser closed');
     
     return { screenshotPath, pdfPath };
   } catch (error) {
