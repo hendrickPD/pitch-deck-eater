@@ -45,14 +45,6 @@ A Slack bot that automatically captures Pitch and Miro canvases when links are s
    npm run dev
    ```
 
-## Docker
-
-Build and run locally:
-```bash
-docker build -t pitch-deck-eater .
-docker run -p 3000:3000 pitch-deck-eater
-```
-
 ## License
 
 MIT 

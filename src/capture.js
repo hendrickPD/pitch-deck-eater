@@ -12,8 +12,7 @@ async function captureCanvas(url) {
       '--disable-accelerated-2d-canvas',
       '--disable-gpu',
       '--window-size=1920x1080'
-    ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath()
+    ]
   });
 
   try {

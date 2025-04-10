@@ -1,9 +1,11 @@
 services:
   - type: web
     name: pitch-deck-eater
-    env: docker
+    env: node
     plan: free
     region: oregon  # Specify a region close to your users
+    buildCommand: npm install
+    startCommand: npm start
     healthCheckPath: /health  # Add a health check endpoint
     autoDeploy: true  # Enable automatic deployments
     envVars:
