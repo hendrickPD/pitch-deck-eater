@@ -115,11 +115,15 @@ async function captureCanvas(url) {
     console.log('Request interception set up');
 
     console.log('Navigating to URL:', url);
-    // Navigate to the page and wait for it to load
+    // Navigate to the page and wait for DOM content to load
     await page.goto(url, { 
-      waitUntil: 'networkidle0'
+      waitUntil: 'domcontentloaded'
     });
-    console.log('Page loaded');
+    console.log('DOM content loaded');
+    
+    // Wait a short time for dynamic content to render
+    console.log('Waiting for dynamic content...');
+    await page.waitForTimeout(2000);
     
     // Wait for the main content to be visible
     console.log('Waiting for presentation content...');
