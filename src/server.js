@@ -1,123 +1,92 @@
-const { App, ExpressReceiver } = require('@slack/bolt');
+const { App } = require('@slack/bolt');
 const { captureCanvas } = require('./capture');
+const express = require('express');
+const path = require('path');
+const fs = require('fs').promises;
 
-// Initialize the receiver
-const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  processBeforeResponse: true,
-  endpoints: '/slack/events'  // Add explicit endpoint for Slack events
-});
-
-// Get the Express app
-const app = receiver.app;
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  console.log('Health check requested');
-  res.send('OK');
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
-  console.log('Root endpoint requested');
-  res.send('Pitch Deck Eater is running! 🎨');
-});
-
-// Initialize Slack app with the receiver
-const slackApp = new App({
+// Initialize the Slack app
+const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  receiver,
-  endpoints: '/slack/events'  // Match the receiver endpoint
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  socketMode: true,
+  appToken: process.env.SLACK_APP_TOKEN
 });
 
-// Log all incoming messages
-slackApp.message(async ({ message, next }) => {
-  console.log('Received message:', JSON.stringify(message, null, 2));
-  await next();
-});
+// Initialize Express
+const expressApp = express();
+expressApp.use(express.json());
 
-// Handle Pitch/Miro links
-slackApp.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
+// Serve static files
+expressApp.use('/static', express.static(path.join(__dirname, '..', 'static')));
+
+// Handle Slack events
+app.event('message', async ({ event, client }) => {
   try {
-    console.log('Processing canvas link:', message.text);
-    console.log('Message details:', JSON.stringify({
-      user: message.user,
-      channel: message.channel,
-      ts: message.ts,
-      type: message.type
-    }, null, 2));
+    // Check if the message contains a Pitch or Miro link
+    const pitchRegex = /https:\/\/pitch\.com\/[^\s]+/;
+    const miroRegex = /https:\/\/(?:miro\.com|miro\.app)\/[^\s]+/;
     
-    // Initial response
-    await say({
-      text: `I'll capture that canvas for you! Processing... 🎨`,
-      thread_ts: message.thread_ts || message.ts
-    });
+    const pitchMatch = event.text.match(pitchRegex);
+    const miroMatch = event.text.match(miroRegex);
+    
+    if (pitchMatch || miroMatch) {
+      const url = pitchMatch ? pitchMatch[0] : miroMatch[0];
+      console.log('Processing URL:', url);
+      
+      // Capture the canvas
+      const { screenshotPath, pdfPath } = await captureCanvas(url);
+      console.log('Capture completed:', { screenshotPath, pdfPath });
+      
+      // Upload files to Slack
+      try {
+        // Upload screenshot
+        const screenshotResult = await client.files.uploadV2({
+          channels: event.channel,
+          file: await fs.readFile(screenshotPath),
+          filename: 'canvas-screenshot.jpg',
+          title: 'Canvas Screenshot'
+        });
+        console.log('Screenshot uploaded:', screenshotResult);
 
-    // Extract URL from message
-    const urlMatch = message.text.match(/https:\/\/(pitch|miro)\.com\/[^\s>]+/);
-    if (!urlMatch) {
-      throw new Error('No valid URL found in message');
+        // Upload PDF
+        const pdfResult = await client.files.uploadV2({
+          channels: event.channel,
+          file: await fs.readFile(pdfPath),
+          filename: 'canvas.pdf',
+          title: 'Canvas PDF'
+        });
+        console.log('PDF uploaded:', pdfResult);
+
+        // Clean up files
+        await fs.unlink(screenshotPath);
+        await fs.unlink(pdfPath);
+      } catch (uploadError) {
+        console.error('Error uploading files:', uploadError);
+        throw uploadError;
+      }
     }
-
-    // Capture canvas
-    console.log('Starting canvas capture...');
-    const { screenshotPath, pdfPath } = await captureCanvas(urlMatch[0]);
-    
-    // Upload files to Slack
-    console.log('Uploading files to Slack...');
-    const [screenshotUpload, pdfUpload] = await Promise.all([
-      slackApp.client.files.upload({
-        channels: message.channel,
-        initial_comment: "Here's your canvas screenshot! 📸",
-        file: screenshotPath,
-        thread_ts: message.thread_ts || message.ts
-      }),
-      slackApp.client.files.upload({
-        channels: message.channel,
-        initial_comment: "And here's the PDF version! 📄",
-        file: pdfPath,
-        thread_ts: message.thread_ts || message.ts
-      })
-    ]);
-    
-    console.log('Files uploaded successfully');
   } catch (error) {
     console.error('Error processing message:', error);
-    await say({
-      text: 'Sorry, I had trouble capturing that canvas. 😕\nError: ' + error.message,
-      thread_ts: message.thread_ts || message.ts
-    });
+    // Optionally send an error message to the channel
+    try {
+      await client.chat.postMessage({
+        channel: event.channel,
+        text: `Sorry, I encountered an error while processing your request: ${error.message}`
+      });
+    } catch (postError) {
+      console.error('Error posting error message:', postError);
+    }
   }
 });
 
-// Log all requests to /slack/events
-app.use('/slack/events', (req, res, next) => {
-  console.log('Slack event received:', {
-    method: req.method,
-    headers: req.headers,
-    body: req.body
-  });
-  next();
+// Start the Express server
+const PORT = process.env.PORT || 3000;
+expressApp.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Express error:', err);
-  res.status(500).send('Internal Server Error');
-});
-
-// Start the app
+// Start the Slack app
 (async () => {
-  try {
-    const port = process.env.PORT || 3000;
-    await slackApp.start(port);
-    console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
-    const authTest = await slackApp.client.auth.test();
-    console.log('Bot User ID:', authTest.bot_id);
-    console.log('Bot User Name:', authTest.user);
-    console.log('Team Name:', authTest.team);
-  } catch (error) {
-    console.error('Failed to start the app:', error);
-    process.exit(1);
-  }
+  await app.start();
+  console.log('Slack app is running!');
 })(); 
