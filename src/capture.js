@@ -55,9 +55,12 @@ async function captureCanvas(url) {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--window-size=1920,1080'
+        '--window-size=1920,1080',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
-      executablePath: chromePath
+      executablePath: chromePath,
+      timeout: 60000
     });
 
     const page = await browser.newPage();
@@ -72,13 +75,56 @@ async function captureCanvas(url) {
     // Set desktop user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
 
+    // Enable request interception to log network activity
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      console.log('Request:', request.method(), request.url());
+      request.continue();
+    });
+
+    page.on('response', response => {
+      console.log('Response:', response.status(), response.url());
+    });
+
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
     
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    // Try multiple navigation strategies
+    try {
+      console.log('Attempting first navigation strategy...');
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+      });
+      console.log('Initial navigation completed');
+    } catch (error) {
+      console.log('First navigation attempt failed:', error.message);
+      throw error;
+    }
+
+    // Wait for either the main content or a reasonable amount of time
+    try {
+      console.log('Waiting for page content...');
+      await Promise.race([
+        page.waitForSelector('main', { timeout: 30000 }),
+        page.waitForSelector('body', { timeout: 30000 }),
+        page.waitForSelector('div[role="main"]', { timeout: 30000 }),
+        page.waitForSelector('article', { timeout: 30000 }),
+        new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds as fallback
+      ]);
+      console.log('Page content detected');
+    } catch (error) {
+      console.log('No specific selectors found, but page might still be loaded');
+    }
+
+    // Check if the page has any content
+    const hasContent = await page.evaluate(() => {
+      return document.body && document.body.innerHTML.length > 0;
+    });
     
-    // Wait for the main content to load
-    await page.waitForSelector('main', { timeout: 10000 });
+    if (!hasContent) {
+      throw new Error('Page appears to be empty');
+    }
     
     // Ensure static directory exists
     const staticDir = path.join(process.cwd(), 'static');
