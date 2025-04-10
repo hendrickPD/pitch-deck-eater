@@ -89,7 +89,7 @@ async function captureCanvas(url) {
         fullPage: true
       });
 
-      // Convert to PDF
+      // Convert to PDF with high quality
       console.log('Converting to PDF...');
       const pdfPath = path.join(staticDir, `canvas-${Date.now()}.pdf`);
       await page.pdf({
@@ -101,7 +101,9 @@ async function captureCanvas(url) {
           right: '20px',
           bottom: '20px',
           left: '20px'
-        }
+        },
+        preferCSSPageSize: true,
+        scale: 0.8
       });
 
       return {
