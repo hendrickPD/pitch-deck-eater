@@ -3,22 +3,48 @@ const path = require('path');
 const fs = require('fs').promises;
 const { execSync } = require('child_process');
 
+async function findChrome() {
+  const possiblePaths = [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    process.env.CHROME_PATH // Allow override via env var
+  ].filter(Boolean); // Remove undefined entries
+
+  for (const chromePath of possiblePaths) {
+    try {
+      await fs.access(chromePath);
+      console.log('Found Chrome at:', chromePath);
+      
+      // Verify it's executable
+      const version = execSync(`${chromePath} --version`).toString().trim();
+      console.log('Chrome version:', version);
+      
+      return chromePath;
+    } catch (error) {
+      console.log(`Chrome not found at ${chromePath}:`, error.message);
+    }
+  }
+
+  // Try using which command
+  try {
+    const chromePath = execSync('which google-chrome').toString().trim();
+    if (chromePath) {
+      console.log('Found Chrome using which:', chromePath);
+      return chromePath;
+    }
+  } catch (error) {
+    console.log('Chrome not found using which command');
+  }
+
+  throw new Error('Could not find Chrome installation');
+}
+
 async function captureCanvas(url) {
-  const chromePath = '/usr/bin/google-chrome';
   console.log('Launching browser...');
 
-  // Verify Chrome exists
-  try {
-    await fs.access(chromePath);
-    console.log('Chrome exists at:', chromePath);
-    
-    // Try to get Chrome version
-    const version = execSync(`${chromePath} --version`).toString();
-    console.log('Chrome version:', version);
-  } catch (error) {
-    console.error('Error verifying Chrome:', error.message);
-    throw new Error(`Chrome verification failed: ${error.message}`);
-  }
+  // Find Chrome executable
+  const chromePath = await findChrome();
+  console.log('Using Chrome at:', chromePath);
   
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -85,6 +111,9 @@ async function captureCanvas(url) {
       screenshotPath,
       pdfPath
     };
+  } catch (error) {
+    console.error('Error during capture:', error);
+    throw error;
   } finally {
     console.log('Closing browser...');
     await browser.close();
