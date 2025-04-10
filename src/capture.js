@@ -5,7 +5,26 @@ const fs = require('fs').promises;
 async function captureCanvas(url) {
   console.log('Launching browser...');
   
+  // Log environment info
+  console.log('Environment details:');
+  console.log('- PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
+  console.log('- Current directory:', process.cwd());
+  console.log('- User:', process.env.USER);
+  console.log('- Platform:', process.platform);
+  console.log('- Architecture:', process.arch);
+
   try {
+    // Check cache directory
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/.cache/puppeteer';
+    try {
+      await fs.access(cacheDir);
+      console.log('Cache directory exists:', cacheDir);
+      const contents = await fs.readdir(cacheDir);
+      console.log('Cache directory contents:', contents);
+    } catch (error) {
+      console.error('Error accessing cache directory:', error.message);
+    }
+
     const browser = await puppeteer.launch({
       headless: 'new',
       args: [
@@ -76,11 +95,16 @@ async function captureCanvas(url) {
     }
   } catch (error) {
     console.error('Error during capture:', error);
-    console.log('Environment details:');
-    console.log('- Current directory:', process.cwd());
-    console.log('- User:', process.env.USER);
-    console.log('- Platform:', process.platform);
-    console.log('- Architecture:', process.arch);
+    if (error.message.includes('Could not find Chrome')) {
+      console.log('Chrome installation details:');
+      try {
+        const browserFetcher = puppeteer.createBrowserFetcher();
+        const revisions = await browserFetcher.localRevisions();
+        console.log('Available Chrome revisions:', revisions);
+      } catch (e) {
+        console.error('Error checking Chrome revisions:', e.message);
+      }
+    }
     throw error;
   }
 }
