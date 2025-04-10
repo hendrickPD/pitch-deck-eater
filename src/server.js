@@ -12,8 +12,6 @@ app.message(handleMessage);
 
 // Start the app
 (async () => {
-  // Use the PORT environment variable provided by Render
-  const port = process.env.PORT || 10000;
-  await app.start(port);
-  console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
+  await app.start();
+  console.log('⚡️ Pitch Deck Eater is running!');
 })(); 
