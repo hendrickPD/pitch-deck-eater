@@ -130,9 +130,12 @@ async function captureCanvas(url) {
     const staticDir = path.join(process.cwd(), 'static');
     await fs.mkdir(staticDir, { recursive: true });
     
+    // Extract filename from URL
+    const urlParts = url.split('/');
+    const filename = urlParts[urlParts.length - 1];
     const timestamp = Date.now();
-    const screenshotPath = path.join(staticDir, `canvas-${timestamp}.jpg`);
-    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
+    const screenshotPath = path.join(staticDir, `${filename}-${timestamp}.jpg`);
+    const pdfPath = path.join(staticDir, `${filename}-${timestamp}.pdf`);
     
     // Take screenshot
     console.log('Taking screenshot...');
