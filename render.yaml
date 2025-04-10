@@ -6,8 +6,9 @@ services:
     region: oregon  # Specify a region close to your users
     buildCommand: |
       sudo apt-get update
-      sudo apt-get install -y chromium chromium-common
+      sudo apt-get install -y wget
       npm install
+      npm run build
     startCommand: npm start
     healthCheckPath: /health  # Add a health check endpoint
     autoDeploy: true  # Enable automatic deployments

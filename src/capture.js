@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -13,7 +13,7 @@ async function captureCanvas(url) {
       '--disable-gpu',
       '--window-size=1920x1080'
     ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium'
+    executablePath: '/usr/bin/google-chrome'
   });
 
   try {
