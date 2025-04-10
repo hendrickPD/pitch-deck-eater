@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       # These will be configured in Render's dashboard
       - key: SLACK_BOT_TOKEN
         sync: false
