@@ -81,8 +81,8 @@ app.event('message', async ({ event, client }) => {
         const pdfResult = await client.files.uploadV2({
           channel_id: event.channel,
           file: await fs.readFile(pdfPath),
-          filename: 'canvas.pdf',
-          title: 'Canvas PDF'
+          filename: `${filename}.pdf`,
+          title: filename
         });
         console.log('PDF uploaded:', pdfResult);
 
