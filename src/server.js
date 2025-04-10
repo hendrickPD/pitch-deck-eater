@@ -44,14 +44,15 @@ app.event('message', async ({ event, client }) => {
     console.log('Message text:', messageText);
 
     // Check if the message contains a Pitch or Miro link
-    const pitchRegex = /https:\/\/pitch\.com\/[^\s]+/;
-    const miroRegex = /https:\/\/(?:miro\.com|miro\.app)\/[^\s]+/;
+    const pitchRegex = /https:\/\/pitch\.com\/[^\s<>]+/;
+    const miroRegex = /https:\/\/(?:miro\.com|miro\.app)\/[^\s<>]+/;
     
     const pitchMatch = messageText.match(pitchRegex);
     const miroMatch = messageText.match(miroRegex);
     
     if (pitchMatch || miroMatch) {
-      const url = pitchMatch ? pitchMatch[0] : miroMatch[0];
+      // Clean the URL by removing any trailing characters
+      const url = (pitchMatch ? pitchMatch[0] : miroMatch[0]).replace(/[<>]+$/, '');
       console.log('Processing URL:', url);
       
       // Send initial response
