@@ -1,67 +1,18 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs').promises;
-const { execSync } = require('child_process');
-
-async function findBrowser() {
-  const possiblePaths = [
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/usr/lib/chromium/chromium',
-    '/usr/lib/chromium-browser/chromium-browser'
-  ];
-
-  console.log('Searching for Chromium...');
-  
-  for (const browserPath of possiblePaths) {
-    try {
-      await fs.access(browserPath);
-      console.log(`Found browser at: ${browserPath}`);
-      return browserPath;
-    } catch (error) {
-      console.log(`Browser not found at: ${browserPath}`);
-    }
-  }
-
-  throw new Error('No Chromium installation found');
-}
 
 async function captureCanvas(url) {
   console.log('Launching browser...');
   
-  // Debug system info
-  try {
-    console.log('System info:', execSync('uname -a').toString());
-    console.log('Directory contents:', execSync('ls -la /usr/bin/chromium*').toString());
-  } catch (error) {
-    console.error('Error getting system info:', error.message);
-  }
-
-  // Find browser
-  const executablePath = await findBrowser();
-  console.log('Using browser path:', executablePath);
-  
-  try {
-    const stats = await fs.stat(executablePath);
-    console.log('Browser executable exists:', stats.isFile());
-    console.log('File permissions:', stats.mode.toString(8));
-    
-    // Try to run browser
-    const version = execSync(`${executablePath} --version`).toString();
-    console.log('Browser version:', version);
-  } catch (error) {
-    console.error('Error checking browser:', error.message);
-  }
-  
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath,
+    executablePath: '/usr/bin/google-chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-software-rasterizer',
       '--headless'
     ]
   });
