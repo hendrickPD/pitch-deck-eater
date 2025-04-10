@@ -1,59 +1,46 @@
-const { App, ExpressReceiver } = require('@slack/bolt');
+const { App } = require('@slack/bolt');
 const express = require('express');
-const { captureCanvas } = require('./capture');
 
-// Initialize the receiver
-const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  processBeforeResponse: true,
-});
-
-// Create Express app
-const app = receiver.app;
-
-// Add middleware
-app.use(express.json());
+// Initialize Express app
+const expressApp = express();
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+expressApp.get('/health', (req, res) => {
   res.send('OK');
 });
 
 // Root endpoint
-app.get('/', (req, res) => {
+expressApp.get('/', (req, res) => {
   res.send('Pitch Deck Eater is running! 🎨');
 });
 
-// Initialize Slack app with the Express receiver
-const slackApp = new App({
+// Initialize Slack app
+const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  receiver: receiver
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  socketMode: false
 });
 
 // Handle Slack events
-slackApp.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
+app.message(/https:\/\/(pitch|miro)\.com\/.*/, async ({ message, say }) => {
   try {
-    await say(`I'll capture that canvas for you! Processing...`);
-    const pdfPath = await captureCanvas(message.text);
-    
-    // Upload to Slack
-    await slackApp.client.files.upload({
-      channels: message.channel,
-      initial_comment: "Here's your canvas capture! 🎨",
-      file: pdfPath,
-    });
+    await say(`I see you shared a canvas link! I'll work on capturing that soon. 🎨`);
   } catch (error) {
-    console.error('Error capturing canvas:', error);
-    await say('Sorry, I had trouble capturing that canvas. 😕');
+    console.error('Error:', error);
+    await say('Sorry, I had trouble processing that link. 😕');
   }
 });
 
 // Start the app
 (async () => {
-  // Get port from environment variable or use 3000 as fallback
   const port = process.env.PORT || 3000;
   
   // Start the app
-  await slackApp.start(port);
+  await app.start(port);
   console.log(`⚡️ Pitch Deck Eater is running on port ${port}!`);
+  
+  // Start Express server
+  expressApp.listen(port, () => {
+    console.log(`Express server is running on port ${port}`);
+  });
 })(); 
