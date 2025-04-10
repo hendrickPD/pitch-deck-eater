@@ -55,7 +55,7 @@ async function captureCanvas(url) {
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--window-size=1920,1080',
+        '--window-size=3840,2160',
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process'
       ],
@@ -75,6 +75,23 @@ async function captureCanvas(url) {
     // Set desktop user agent
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
 
+    // Disable animations and transitions
+    await page.evaluate(() => {
+      const style = document.createElement('style');
+      style.type = 'text/css';
+      style.innerHTML = `
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+        /* Hide common overlays */
+        .intercom-launcher, .intercom-messenger, .popup-overlay {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+
     // Enable request interception to log network activity
     await page.setRequestInterception(true);
     page.on('request', request => {
@@ -93,10 +110,13 @@ async function captureCanvas(url) {
     try {
       console.log('Attempting first navigation strategy...');
       await page.goto(url, { 
-        waitUntil: 'domcontentloaded',
+        waitUntil: 'networkidle2',
         timeout: 60000
       });
       console.log('Initial navigation completed');
+      
+      // Wait for additional time to ensure content is fully rendered
+      await page.waitForTimeout(3000);
     } catch (error) {
       console.log('First navigation attempt failed:', error.message);
       throw error;
@@ -116,6 +136,17 @@ async function captureCanvas(url) {
     } catch (error) {
       console.log('No specific selectors found, but page might still be loaded');
     }
+
+    // Check page dimensions
+    const dimensions = await page.evaluate(() => {
+      return {
+        width: document.documentElement.clientWidth,
+        height: document.documentElement.clientHeight,
+        scrollHeight: document.documentElement.scrollHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+    console.log('Page dimensions:', dimensions);
 
     // Check if the page has any content
     const hasContent = await page.evaluate(() => {
@@ -139,12 +170,18 @@ async function captureCanvas(url) {
     
     // Take screenshot
     console.log('Taking screenshot...');
-    await page.screenshot({
-      path: screenshotPath,
-      type: 'jpeg',
-      quality: 90,
-      fullPage: true
-    });
+    try {
+      await page.screenshot({
+        path: screenshotPath,
+        type: 'jpeg',
+        quality: 90,
+        fullPage: true
+      });
+      console.log('Screenshot captured successfully');
+    } catch (screenshotError) {
+      console.error('Screenshot failed:', screenshotError);
+      throw screenshotError;
+    }
     
     // Convert to PDF with improved settings
     console.log('Converting to PDF...');
