@@ -77,8 +77,17 @@ async function captureCanvas(url) {
     });
 
     // Wait for the main content to load
-    await page.waitForSelector('body', { timeout: 10000 });
-    
+    await page.waitForSelector('body', { timeout: 30000 });
+    await page.waitForTimeout(2000); // Give extra time for dynamic content
+
+    // Ensure we're in landscape mode
+    await page.setViewport({
+      width: 1920,
+      height: 1080,
+      deviceScaleFactor: 1,
+      isLandscape: true
+    });
+
     // Ensure static directory exists
     const staticDir = path.join(__dirname, '..', 'static');
     await fs.mkdir(staticDir, { recursive: true });
@@ -111,7 +120,6 @@ async function captureCanvas(url) {
         bottom: '0px',
         left: '0px'
       },
-      preferCSSPageSize: true,
       scale: 0.8
     });
 
