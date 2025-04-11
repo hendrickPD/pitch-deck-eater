@@ -14,13 +14,33 @@ async function captureCanvas(url) {
     console.log('- Architecture:', process.arch);
 
     // Set up cache directory
-    const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/src/.cache/puppeteer';
     console.log('Cache directory created/exists:', cacheDir);
 
     try {
       await fs.mkdir(cacheDir, { recursive: true });
+      console.log('Cache directory created/exists:', cacheDir);
       const contents = await fs.readdir(cacheDir);
       console.log('Cache directory contents:', contents);
+      
+      // Check for Chrome binary
+      const chromePath = path.join(cacheDir, 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
+      try {
+        const stats = await fs.stat(chromePath);
+        console.log('Chrome binary found at:', chromePath);
+        console.log('Chrome binary size:', stats.size);
+      } catch (error) {
+        console.error('Chrome binary not found at:', chromePath);
+        // If Chrome is not found, try to install it
+        console.log('Attempting to install Chrome...');
+        const { execSync } = require('child_process');
+        try {
+          execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+          console.log('Chrome installation completed');
+        } catch (installError) {
+          console.error('Failed to install Chrome:', installError.message);
+        }
+      }
     } catch (error) {
       console.error('Error with cache directory:', error.message);
     }
