@@ -16,36 +16,29 @@ async function captureCanvas(url) {
     // Set up cache directory
     const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
     console.log('Cache directory created/exists:', cacheDir);
-    
+
     try {
+      await fs.mkdir(cacheDir, { recursive: true });
       const contents = await fs.readdir(cacheDir);
       console.log('Cache directory contents:', contents);
-    } catch (err) {
-      console.log('Cache directory is empty or not accessible');
+    } catch (error) {
+      console.error('Error with cache directory:', error.message);
     }
 
-    // Check for Chrome binary
-    const chromePath = path.join(cacheDir, 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
-    console.log('Chrome binary not found at:', chromePath);
-    console.log('Attempting to install Chrome...');
-
-    // Launch browser with specific arguments
     browser = await puppeteer.launch({
       headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
-        '--window-size=1920,1080'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+        '--headless'
+      ]
     });
 
     const page = await browser.newPage();
     
-    // Set desktop viewport
+    // Set a larger viewport for better capture
     await page.setViewport({
       width: 1920,
       height: 1080,
@@ -57,43 +50,51 @@ async function captureCanvas(url) {
 
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
-    
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-    
+
+    await page.goto(url, { 
+      waitUntil: 'networkidle0',
+      timeout: 60000 
+    });
+
     // Wait for the main content to load
-    await page.waitForSelector('main', { timeout: 10000 });
+    await page.waitForSelector('body', { timeout: 10000 });
     
     // Ensure static directory exists
-    const staticDir = path.join(process.cwd(), 'static');
+    const staticDir = path.join(__dirname, '..', 'static');
     await fs.mkdir(staticDir, { recursive: true });
     
+    // Generate timestamp for filenames
     const timestamp = Date.now();
-    const screenshotPath = path.join(staticDir, `canvas-${timestamp}.jpg`);
-    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
     
-    // Take screenshot
-    console.log('Taking screenshot...');
+    // Take JPEG screenshot
+    console.log('Taking JPEG screenshot...');
+    const jpegPath = path.join(staticDir, `canvas-${timestamp}.jpg`);
     await page.screenshot({
-      path: screenshotPath,
+      path: jpegPath,
       type: 'jpeg',
-      quality: 90,
+      quality: 100,
       fullPage: true
     });
-    
-    // Convert to PDF
+
+    // Convert to PDF with high quality
     console.log('Converting to PDF...');
+    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
     await page.pdf({
       path: pdfPath,
       format: 'A4',
+      landscape: true,  // Set to landscape mode for widescreen
       printBackground: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-      scale: 0.8
+      margin: {
+        top: '0px',
+        right: '0px',
+        bottom: '0px',
+        left: '0px'
+      },
+      preferCSSPageSize: true,
+      scale: 1.0  // Full scale for maximum quality
     });
-    
-    console.log('Closing browser...');
-    await browser.close();
-    
-    return { screenshotPath, pdfPath };
+
+    return { jpegPath, pdfPath };
   } catch (error) {
     console.error('Error in captureCanvas:', error);
     if (browser) {
