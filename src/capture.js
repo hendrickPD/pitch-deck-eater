@@ -102,16 +102,15 @@ async function captureCanvas(url) {
     await page.pdf({
       path: pdfPath,
       format: 'A4',
-      landscape: true,  // Set to landscape mode for widescreen
       printBackground: true,
       margin: {
-        top: '0px',
-        right: '0px',
-        bottom: '0px',
-        left: '0px'
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
       },
       preferCSSPageSize: true,
-      scale: 1.0  // Full scale for maximum quality
+      scale: 0.8  // Adjusted from 1.0 to 0.8 to match working version
     });
 
     return { jpegPath, pdfPath };
