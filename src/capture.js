@@ -101,6 +101,9 @@ async function captureCanvas(url) {
     const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
     await page.pdf({
       path: pdfPath,
+      width: '1920px',
+      height: '1080px',
+      landscape: true,
       printBackground: true,
       margin: {
         top: '0px',
@@ -109,7 +112,7 @@ async function captureCanvas(url) {
         left: '0px'
       },
       preferCSSPageSize: true,
-      scale: 1.0  // Match the viewport scale
+      scale: 0.8
     });
 
     return { jpegPath, pdfPath };
