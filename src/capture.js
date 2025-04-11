@@ -79,37 +79,38 @@ async function captureCanvas(url) {
       const staticDir = path.join(__dirname, '..', 'static');
       await fs.mkdir(staticDir, { recursive: true });
       
-      // Take screenshot
-      console.log('Taking screenshot...');
-      const screenshotPath = path.join(staticDir, `canvas-${Date.now()}.jpg`);
+      // Generate timestamp for filenames
+      const timestamp = Date.now();
+      
+      // Take JPEG screenshot
+      console.log('Taking JPEG screenshot...');
+      const jpegPath = path.join(staticDir, `canvas-${timestamp}.jpg`);
       await page.screenshot({
-        path: screenshotPath,
+        path: jpegPath,
         type: 'jpeg',
-        quality: 80,
+        quality: 100,
         fullPage: true
       });
 
       // Convert to PDF with high quality
       console.log('Converting to PDF...');
-      const pdfPath = path.join(staticDir, `canvas-${Date.now()}.pdf`);
+      const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
       await page.pdf({
         path: pdfPath,
         format: 'A4',
+        landscape: true,  // Set to landscape mode for widescreen
         printBackground: true,
         margin: {
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          left: '20px'
+          top: '0px',
+          right: '0px',
+          bottom: '0px',
+          left: '0px'
         },
         preferCSSPageSize: true,
-        scale: 0.8
+        scale: 1.0  // Full scale for maximum quality
       });
 
-      return {
-        screenshotPath,
-        pdfPath
-      };
+      return { jpegPath, pdfPath };
     } finally {
       console.log('Closing browser...');
       await browser.close();
