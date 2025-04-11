@@ -62,7 +62,7 @@ async function captureCanvas(url) {
     await page.setViewport({
       width: 1920,
       height: 1080,
-      deviceScaleFactor: 2
+      deviceScaleFactor: 1
     });
 
     // Set desktop user agent
