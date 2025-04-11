@@ -110,8 +110,6 @@ async function captureCanvas(url) {
     const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
     await page.pdf({
       path: pdfPath,
-      width: '1920px',
-      height: '1080px',
       landscape: true,
       printBackground: true,
       margin: {
