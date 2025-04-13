@@ -137,7 +137,8 @@ async function captureCanvas(url) {
 
     // Wait for the main content to load
     await page.waitForSelector('body', { timeout: 30000 });
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait an additional 5 seconds for content to load
+    await page.waitForTimeout(5000);
 
     // Ensure we're in landscape mode
     await page.setViewport({
