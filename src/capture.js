@@ -83,7 +83,7 @@ async function captureCanvas(url) {
       console.log('Cache directory contents:', contents);
       
       // Check for Chrome binary
-      const chromePath = path.join(cacheDir, 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
+      const chromePath = path.join('/opt/render/.cache/puppeteer', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
       try {
         const stats = await fs.stat(chromePath);
         console.log('Chrome binary found at:', chromePath);

@@ -62,8 +62,10 @@ app.event('message', async ({ event, client }) => {
     const miroMatch = messageText.match(miroRegex);
     
     if (pitchMatch || miroMatch) {
-      // Clean the URL by removing any trailing characters
-      const url = (pitchMatch ? pitchMatch[0] : miroMatch[0]).replace(/[<>]+$/, '');
+      // Clean the URL by removing any trailing characters and Slack formatting
+      const url = (pitchMatch ? pitchMatch[0] : miroMatch[0])
+        .replace(/[<>]+$/, '')  // Remove trailing angle brackets
+        .split('|')[0];         // Take only the URL part before the pipe
       console.log('Processing URL:', url);
       
       // Send initial response
