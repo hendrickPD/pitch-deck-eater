@@ -1,6 +1,65 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs').promises;
+const { PDFDocument } = require('pdf-lib');
+
+async function createPDFFromScreenshot(jpegBuffer) {
+  console.log('Creating PDF from screenshot...');
+  const pdfDoc = await PDFDocument.create();
+  
+  // Set PDF compression options
+  pdfDoc.setProducer('Pitch Deck Eater');
+  pdfDoc.setCreator('Pitch Deck Eater');
+  
+  try {
+    // Load the JPEG image
+    const jpegImage = await pdfDoc.embedJpg(jpegBuffer);
+    console.log(`Successfully loaded JPEG image, dimensions: ${jpegImage.width}x${jpegImage.height}`);
+    
+    // Add a new page with the same dimensions as the image
+    const page = pdfDoc.addPage([jpegImage.width, jpegImage.height]);
+    
+    // Draw the image on the page
+    page.drawImage(jpegImage, {
+      x: 0,
+      y: 0,
+      width: jpegImage.width,
+      height: jpegImage.height,
+    });
+    
+    console.log('Successfully added page as JPEG');
+  } catch (error) {
+    console.error('Error processing screenshot:', error);
+    throw new Error(`Failed to process screenshot: ${error.message}`);
+  }
+  
+  console.log('Saving PDF...');
+  try {
+    // Save with compression options
+    const pdfBytes = await pdfDoc.save({
+      useObjectStreams: true,
+      addDefaultPage: false
+    });
+    const pdfBuffer = Buffer.from(pdfBytes);  // Convert Uint8Array to Buffer
+    
+    console.log('PDF created successfully, size:', pdfBuffer.length, 'bytes');
+    
+    // Validate PDF buffer
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('Generated PDF buffer is invalid or empty');
+    }
+    
+    // Additional validation - check if it's a valid PDF
+    if (pdfBuffer.length < 100 || !pdfBuffer.toString('utf8', 0, 5).includes('%PDF-')) {
+      throw new Error('Generated PDF buffer does not contain valid PDF data');
+    }
+    
+    return pdfBuffer;
+  } catch (error) {
+    console.error('Error saving PDF:', error);
+    throw new Error(`Failed to save PDF: ${error.message}`);
+  }
+}
 
 async function captureCanvas(url) {
   let browser;
@@ -105,7 +164,13 @@ async function captureCanvas(url) {
       fullPage: true
     });
 
-    return { jpegPath };
+    // Read the JPEG file and convert to PDF
+    const jpegBuffer = await fs.readFile(jpegPath);
+    const pdfBuffer = await createPDFFromScreenshot(jpegBuffer);
+    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
+    await fs.writeFile(pdfPath, pdfBuffer);
+
+    return { jpegPath, pdfPath };
   } catch (error) {
     console.error('Error in captureCanvas:', error);
     if (browser) {

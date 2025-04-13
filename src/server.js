@@ -73,10 +73,10 @@ app.event('message', async ({ event, client }) => {
       });
       
       // Capture the canvas
-      const { jpegPath } = await captureCanvas(url);
-      console.log('Capture completed:', { jpegPath });
+      const { jpegPath, pdfPath } = await captureCanvas(url);
+      console.log('Capture completed:', { jpegPath, pdfPath });
       
-      // Upload file to Slack
+      // Upload files to Slack
       try {
         // Upload JPEG
         const jpegResult = await client.files.uploadV2({
@@ -87,10 +87,20 @@ app.event('message', async ({ event, client }) => {
         });
         console.log('JPEG uploaded:', jpegResult);
 
-        // Clean up file
+        // Upload PDF
+        const pdfResult = await client.files.uploadV2({
+          channel_id: event.channel,
+          file: await fs.readFile(pdfPath),
+          filename: 'canvas.pdf',
+          title: 'Canvas PDF'
+        });
+        console.log('PDF uploaded:', pdfResult);
+
+        // Clean up files
         await fs.unlink(jpegPath);
+        await fs.unlink(pdfPath);
       } catch (uploadError) {
-        console.error('Error uploading file:', uploadError);
+        console.error('Error uploading files:', uploadError);
         throw uploadError;
       }
     }
