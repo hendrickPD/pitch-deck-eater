@@ -114,7 +114,25 @@ async function captureCanvas(url) {
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process',
         '--window-size=1920,1080',
-        '--start-maximized'
+        '--start-maximized',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars',
+        '--disable-notifications',
+        '--disable-popup-blocking',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+        '--disable-ipc-flooding-protection',
+        '--disable-renderer-backgrounding',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--metrics-recording-only',
+        '--mute-audio'
       ]
     });
 
@@ -132,24 +150,46 @@ async function captureCanvas(url) {
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Upgrade-Insecure-Requests': '1'
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1'
+    });
+
+    // Override navigator.webdriver
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+      });
     });
 
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
 
-    try {
-      await page.goto(url, { 
-        waitUntil: ['domcontentloaded', 'networkidle0'],
-        timeout: 90000 
-      });
-    } catch (error) {
-      console.error('Navigation error:', error);
-      // Try a second time with different settings
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000
-      });
+    let navigationSuccess = false;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (!navigationSuccess && retryCount < maxRetries) {
+      try {
+        await page.goto(url, { 
+          waitUntil: ['domcontentloaded', 'networkidle0'],
+          timeout: 90000 
+        });
+        navigationSuccess = true;
+      } catch (error) {
+        console.error(`Navigation attempt ${retryCount + 1} failed:`, error);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          console.log(`Retrying navigation (attempt ${retryCount + 1})...`);
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Wait for the main content to load
