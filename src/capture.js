@@ -132,7 +132,12 @@ async function captureCanvas(url) {
         '--disable-renderer-backgrounding',
         '--enable-features=NetworkService,NetworkServiceInProcess',
         '--metrics-recording-only',
-        '--mute-audio'
+        '--mute-audio',
+        '--disable-site-isolation-trials',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-web-security',
+        '--disable-features=BlockInsecurePrivateNetworkRequests',
+        '--disable-features=SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure'
       ]
     });
 
@@ -154,13 +159,25 @@ async function captureCanvas(url) {
       'Sec-Fetch-Dest': 'document',
       'Sec-Fetch-Mode': 'navigate',
       'Sec-Fetch-Site': 'none',
-      'Sec-Fetch-User': '?1'
+      'Sec-Fetch-User': '?1',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Cache-Control': 'max-age=0'
     });
 
-    // Override navigator.webdriver
+    // Override navigator.webdriver and other automation detection
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', {
         get: () => false,
+      });
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'MacIntel',
       });
     });
 
@@ -173,6 +190,10 @@ async function captureCanvas(url) {
 
     while (!navigationSuccess && retryCount < maxRetries) {
       try {
+        // Add random mouse movements to simulate human behavior
+        await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
+        await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
+        
         await page.goto(url, { 
           waitUntil: ['domcontentloaded', 'networkidle0'],
           timeout: 90000 
