@@ -215,23 +215,87 @@ async function captureCanvas(url) {
     // Generate timestamp for filenames
     const timestamp = Date.now();
     
-    // Take JPEG screenshot
-    console.log('Taking JPEG screenshot...');
-    const jpegPath = path.join(staticDir, `canvas-${timestamp}.jpg`);
-    await page.screenshot({
-      path: jpegPath,
-      type: 'jpeg',
-      quality: 100,
-      fullPage: true
-    });
+    // Array to store all JPEG buffers
+    const jpegBuffers = [];
+    let pageNumber = 1;
+    let hasNextPage = true;
 
-    // Read the JPEG file and convert to PDF
-    const jpegBuffer = await fs.readFile(jpegPath);
-    const pdfBuffer = await createPDFFromScreenshot(jpegBuffer);
+    while (hasNextPage) {
+      // Take JPEG screenshot
+      console.log(`Taking JPEG screenshot of page ${pageNumber}...`);
+      const jpegBuffer = await page.screenshot({
+        type: 'jpeg',
+        quality: 100,
+        fullPage: true
+      });
+      jpegBuffers.push(jpegBuffer);
+
+      // Try to navigate to next page
+      try {
+        // Click center of screen to ensure focus
+        const viewport = await page.viewport();
+        await page.mouse.click(viewport.width / 2, viewport.height / 2);
+        
+        // Press right arrow key
+        await page.keyboard.press('ArrowRight');
+        
+        // Wait for potential animation/transition
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Check if we're still on the same page by comparing screenshots
+        const newJpegBuffer = await page.screenshot({
+          type: 'jpeg',
+          quality: 100,
+          fullPage: true
+        });
+        
+        if (Buffer.compare(jpegBuffer, newJpegBuffer) === 0) {
+          console.log('No more pages detected');
+          hasNextPage = false;
+        } else {
+          pageNumber++;
+        }
+      } catch (error) {
+        console.error('Error navigating to next page:', error);
+        hasNextPage = false;
+      }
+    }
+
+    console.log(`Captured ${pageNumber} pages`);
+
+    // Create a single PDF with all pages
+    const pdfDoc = await PDFDocument.create();
+    
+    // Set PDF metadata
+    pdfDoc.setProducer('Pitch Deck Eater');
+    pdfDoc.setCreator('Pitch Deck Eater');
+    
+    // Add each JPEG as a page
+    for (const jpegBuffer of jpegBuffers) {
+      const jpegImage = await pdfDoc.embedJpg(jpegBuffer);
+      const page = pdfDoc.addPage([jpegImage.width, jpegImage.height]);
+      page.drawImage(jpegImage, {
+        x: 0,
+        y: 0,
+        width: jpegImage.width,
+        height: jpegImage.height,
+      });
+    }
+    
+    // Save the PDF
+    const pdfBytes = await pdfDoc.save({
+      useObjectStreams: true,
+      addDefaultPage: false
+    });
+    const pdfBuffer = Buffer.from(pdfBytes);
+    
+    // Save the PDF file
     const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
     await fs.writeFile(pdfPath, pdfBuffer);
-
-    return { jpegPath, pdfPath };
+    
+    console.log('PDF created successfully with', pageNumber, 'pages');
+    
+    return { pdfPath };
   } catch (error) {
     console.error('Error in captureCanvas:', error);
     if (browser) {
