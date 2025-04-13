@@ -105,23 +105,7 @@ async function captureCanvas(url) {
       fullPage: true
     });
 
-    // Convert to PDF with high quality
-    console.log('Converting to PDF...');
-    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
-    await page.pdf({
-      path: pdfPath,
-      landscape: true,
-      printBackground: true,
-      margin: {
-        top: '0px',
-        right: '0px',
-        bottom: '0px',
-        left: '0px'
-      },
-      scale: 0.8
-    });
-
-    return { jpegPath, pdfPath };
+    return { jpegPath };
   } catch (error) {
     console.error('Error in captureCanvas:', error);
     if (browser) {
