@@ -241,6 +241,8 @@ async function captureCanvas(url) {
         
         // Wait for potential animation/transition
         await new Promise(resolve => setTimeout(resolve, 2000));
+        // Additional wait for content to settle
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Check if we're still on the same page by comparing screenshots
         const newJpegBuffer = await page.screenshot({
