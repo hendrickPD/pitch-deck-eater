@@ -111,7 +111,10 @@ async function captureCanvas(url) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--headless'
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--window-size=1920,1080',
+        '--start-maximized'
       ]
     });
 
@@ -124,16 +127,30 @@ async function captureCanvas(url) {
       deviceScaleFactor: 1
     });
 
-    // Set desktop user agent
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36');
+    // Set desktop user agent and additional headers
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Upgrade-Insecure-Requests': '1'
+    });
 
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
 
-    await page.goto(url, { 
-      waitUntil: 'networkidle0',
-      timeout: 60000 
-    });
+    try {
+      await page.goto(url, { 
+        waitUntil: ['domcontentloaded', 'networkidle0'],
+        timeout: 90000 
+      });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Try a second time with different settings
+      await page.goto(url, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+      });
+    }
 
     // Wait for the main content to load
     await page.waitForSelector('body', { timeout: 30000 });
