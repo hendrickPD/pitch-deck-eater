@@ -61,8 +61,7 @@ async function createPDFFromScreenshot(jpegBuffer) {
   }
 }
 
-async function captureCanvas(url) {
-  let browser;
+async function captureCanvas(url, browser) {
   try {
     // Log environment details
     console.log('Environment details:');
@@ -71,75 +70,6 @@ async function captureCanvas(url) {
     console.log('- User:', process.env.USER);
     console.log('- Platform:', process.platform);
     console.log('- Architecture:', process.arch);
-
-    // Set up cache directory
-    const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/src/.cache/puppeteer';
-    console.log('Cache directory created/exists:', cacheDir);
-
-    try {
-      await fs.mkdir(cacheDir, { recursive: true });
-      console.log('Cache directory created/exists:', cacheDir);
-      const contents = await fs.readdir(cacheDir);
-      console.log('Cache directory contents:', contents);
-      
-      // Check for Chrome binary
-      const chromePath = path.join('/opt/render/.cache/puppeteer', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
-      try {
-        const stats = await fs.stat(chromePath);
-        console.log('Chrome binary found at:', chromePath);
-        console.log('Chrome binary size:', stats.size);
-      } catch (error) {
-        console.error('Chrome binary not found at:', chromePath);
-        // If Chrome is not found, try to install it
-        console.log('Attempting to install Chrome...');
-        const { execSync } = require('child_process');
-        try {
-          execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
-          console.log('Chrome installation completed');
-        } catch (installError) {
-          console.error('Failed to install Chrome:', installError.message);
-        }
-      }
-    } catch (error) {
-      console.error('Error with cache directory:', error.message);
-    }
-
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--window-size=1920,1080',
-        '--start-maximized',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-infobars',
-        '--disable-notifications',
-        '--disable-popup-blocking',
-        '--disable-extensions',
-        '--disable-default-apps',
-        '--disable-sync',
-        '--disable-background-networking',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-        '--disable-ipc-flooding-protection',
-        '--disable-renderer-backgrounding',
-        '--enable-features=NetworkService,NetworkServiceInProcess',
-        '--metrics-recording-only',
-        '--mute-audio',
-        '--disable-site-isolation-trials',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-web-security',
-        '--disable-features=BlockInsecurePrivateNetworkRequests',
-        '--disable-features=SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure'
-      ]
-    });
 
     const page = await browser.newPage();
     
@@ -184,39 +114,24 @@ async function captureCanvas(url) {
     console.log('Creating new page...');
     console.log('Navigating to URL:', url);
 
-    let navigationSuccess = false;
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    while (!navigationSuccess && retryCount < maxRetries) {
-      try {
-        // Add random mouse movements to simulate human behavior
-        await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
-        await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
-        
-        await page.goto(url, { 
-          waitUntil: ['domcontentloaded', 'networkidle0'],
-          timeout: 90000 
-        });
-        navigationSuccess = true;
-      } catch (error) {
-        console.error(`Navigation attempt ${retryCount + 1} failed:`, error);
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          console.log(`Retrying navigation (attempt ${retryCount + 1})...`);
-        } else {
-          throw error;
-        }
-      }
+    try {
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 30000 
+      });
+      console.log('Initial navigation successful');
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      throw error;
     }
 
     // Wait for the main content to load
     await page.waitForSelector('body', { timeout: 30000 });
-    // Wait 5 seconds
+    console.log('Body loaded');
+    
+    // Wait 5 seconds for content to settle
     await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('Initial wait complete');
 
     // Ensure we're in landscape mode
     await page.setViewport({
@@ -225,23 +140,19 @@ async function captureCanvas(url) {
       deviceScaleFactor: 1,
       isLandscape: true
     });
+    console.log('Viewport set to landscape');
 
-    // Add 1 second delay before taking screenshot
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Ensure static directory exists
-    const staticDir = path.join(__dirname, '..', 'static');
-    await fs.mkdir(staticDir, { recursive: true });
-    
-    // Generate timestamp for filenames
-    const timestamp = Date.now();
-    
     // Array to store all JPEG buffers
     const jpegBuffers = [];
     let pageNumber = 1;
     let hasNextPage = true;
 
     while (hasNextPage) {
+      console.log(`Processing page ${pageNumber}...`);
+      
+      // Wait 1 second before taking screenshot
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Take JPEG screenshot
       console.log(`Taking JPEG screenshot of page ${pageNumber}...`);
       const jpegBuffer = await page.screenshot({
@@ -250,20 +161,29 @@ async function captureCanvas(url) {
         fullPage: true
       });
       jpegBuffers.push(jpegBuffer);
+      console.log(`Screenshot taken for page ${pageNumber}`);
+      
+      // Wait 1 second after taking screenshot
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Try to navigate to next page
       try {
         // Click center of screen to ensure focus
         const viewport = await page.viewport();
         await page.mouse.click(viewport.width / 2, viewport.height / 2);
+        console.log('Clicked center of screen');
         
         // Press right arrow key
         await page.keyboard.press('ArrowRight');
+        console.log('Pressed right arrow key');
         
         // Wait for potential animation/transition
         await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Waited 2 seconds after navigation');
+        
         // Additional wait for content to settle
         await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Waited 1 second for content to settle');
         
         // Check if we're still on the same page by comparing screenshots
         const newJpegBuffer = await page.screenshot({
@@ -276,6 +196,7 @@ async function captureCanvas(url) {
           console.log('No more pages detected');
           hasNextPage = false;
         } else {
+          console.log('New page detected, continuing...');
           pageNumber++;
         }
       } catch (error) {
@@ -321,9 +242,6 @@ async function captureCanvas(url) {
     return { pdfPath };
   } catch (error) {
     console.error('Error in captureCanvas:', error);
-    if (browser) {
-      await browser.close();
-    }
     throw error;
   }
 }
