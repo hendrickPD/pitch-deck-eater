@@ -147,6 +147,9 @@ async function captureCanvas(url) {
       isLandscape: true
     });
 
+    // Add 1 second delay before taking screenshot
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Ensure static directory exists
     const staticDir = path.join(__dirname, '..', 'static');
     await fs.mkdir(staticDir, { recursive: true });
