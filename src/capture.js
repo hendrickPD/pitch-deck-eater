@@ -3,6 +3,12 @@ const path = require('path');
 const fs = require('fs').promises;
 const { PDFDocument } = require('pdf-lib');
 
+// Define static directory for file storage
+const staticDir = path.join(process.cwd(), 'static');
+
+// Create static directory if it doesn't exist
+fs.mkdir(staticDir, { recursive: true }).catch(console.error);
+
 async function createPDFFromScreenshot(jpegBuffer) {
   console.log('Creating PDF from screenshot...');
   const pdfDoc = await PDFDocument.create();
