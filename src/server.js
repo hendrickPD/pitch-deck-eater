@@ -12,9 +12,6 @@ async function initializeBrowser() {
   if (!isBrowserInitialized) {
     browser = await puppeteer.launch({
       headless: 'new',
-      executablePath: process.env.NODE_ENV === 'production' 
-        ? '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome'
-        : undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
