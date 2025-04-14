@@ -156,8 +156,8 @@ async function captureCanvas(url, browser) {
     while (hasNextPage) {
       console.log(`Processing page ${pageNumber}...`);
       
-      // Wait 1 second before taking screenshot
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait 2 seconds before taking screenshot (1 second was already there, adding 1 more)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Take JPEG screenshot
       console.log(`Taking JPEG screenshot of page ${pageNumber}...`);
