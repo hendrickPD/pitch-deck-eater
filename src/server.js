@@ -12,6 +12,9 @@ async function initializeBrowser() {
   if (!isBrowserInitialized) {
     browser = await puppeteer.launch({
       headless: 'new',
+      executablePath: process.env.NODE_ENV === 'production' 
+        ? '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome'
+        : undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -76,6 +79,12 @@ app.message(async ({ message, client }) => {
       return;
     }
     processedMessages.add(messageKey);
+
+    // Check if message has text
+    if (!message.text) {
+      console.log('No text in message');
+      return;
+    }
 
     // Extract URL from message
     const urlMatch = message.text.match(/<https:\/\/pitch\.com\/v\/[^>]+>/);
