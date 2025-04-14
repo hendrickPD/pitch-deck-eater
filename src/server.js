@@ -1,7 +1,6 @@
 const { App } = require('@slack/bolt');
 const { captureCanvas } = require('./capture');
-const fs = require('fs');
-const fsPromises = require('fs').promises;
+const fs = require('fs').promises;
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { execSync } = require('child_process');
@@ -116,13 +115,12 @@ app.message(async ({ message, client }) => {
     
     // Upload files to Slack
     try {
-      // Upload the PDF to Slack
-      const result = await client.files.upload({
-        channels: message.channel,
+      // Upload PDF
+      const result = await client.files.uploadV2({
+        channel_id: message.channel,
         file: await fs.readFile(pdfPath),
         filename: `pitch-deck-${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`,
-        title: 'Pitch Deck PDF',
-        initial_comment: "Here's your pitch deck PDF! 🎨"
+        title: 'Pitch Deck PDF'
       });
       console.log('PDF uploaded:', result);
 
@@ -133,7 +131,7 @@ app.message(async ({ message, client }) => {
       });
 
       // Clean up files
-      await fsPromises.unlink(pdfPath);
+      await fs.unlink(pdfPath);
     } catch (uploadError) {
       console.error('Error uploading files:', uploadError);
       await client.chat.postMessage({
