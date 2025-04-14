@@ -198,7 +198,10 @@ async function captureCanvas(url, browser) {
           fullPage: true
         });
         
-        if (Buffer.compare(jpegBuffer, newJpegBuffer) === 0) {
+        // Compare the new screenshot with the previous one
+        const isSamePage = Buffer.compare(jpegBuffer, newJpegBuffer) === 0;
+        
+        if (isSamePage) {
           console.log('No more pages detected');
           hasNextPage = false;
         } else {
@@ -207,20 +210,16 @@ async function captureCanvas(url, browser) {
         }
       } catch (error) {
         console.error('Error navigating to next page:', error);
+        // If we can't navigate, assume we're at the end
         hasNextPage = false;
       }
     }
-
+    
     console.log(`Captured ${pageNumber} pages`);
-
-    // Create a single PDF with all pages
+    
+    // Create PDF from all screenshots
     const pdfDoc = await PDFDocument.create();
     
-    // Set PDF metadata
-    pdfDoc.setProducer('Pitch Deck Eater');
-    pdfDoc.setCreator('Pitch Deck Eater');
-    
-    // Add each JPEG as a page
     for (const jpegBuffer of jpegBuffers) {
       const jpegImage = await pdfDoc.embedJpg(jpegBuffer);
       const page = pdfDoc.addPage([jpegImage.width, jpegImage.height]);
@@ -233,16 +232,9 @@ async function captureCanvas(url, browser) {
     }
     
     // Save the PDF
-    const pdfBytes = await pdfDoc.save({
-      useObjectStreams: true,
-      addDefaultPage: false
-    });
-    const pdfBuffer = Buffer.from(pdfBytes);
-    
-    // Save the PDF file
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const pdfPath = path.join(staticDir, `pitch-deck-${timestamp}.pdf`);
-    await fs.writeFile(pdfPath, pdfBuffer);
+    const pdfBytes = await pdfDoc.save();
+    const pdfPath = path.join(staticDir, `pitch-deck-${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`);
+    await fs.writeFile(pdfPath, pdfBytes);
     
     console.log('PDF created successfully with', pageNumber, 'pages');
     
@@ -250,6 +242,8 @@ async function captureCanvas(url, browser) {
   } catch (error) {
     console.error('Error in captureCanvas:', error);
     throw error;
+  } finally {
+    // Don't close the page here, let the caller handle it
   }
 }
 
