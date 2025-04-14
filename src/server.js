@@ -120,7 +120,7 @@ app.message(async ({ message, client }) => {
         channel_id: message.channel,
         file: await fs.readFile(pdfPath),
         filename: `pitch-deck-${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`,
-        title: 'Pitch Deck PDF'
+        title: `pitch-deck-${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`
       });
       console.log('PDF uploaded:', result);
 
