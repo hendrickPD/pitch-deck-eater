@@ -3,6 +3,13 @@ const { captureCanvas } = require('./capture');
 const fs = require('fs').promises;
 const path = require('path');
 const puppeteer = require('puppeteer');
+const { execSync } = require('child_process');
+
+// Install Chrome in production
+if (process.env.NODE_ENV === 'production') {
+  console.log('Installing Chrome for production...');
+  execSync('npx puppeteer browsers install chrome@127.0.6533.88', { stdio: 'inherit' });
+}
 
 // Initialize browser outside of message handler
 let browser;
