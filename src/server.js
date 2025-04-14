@@ -115,14 +115,15 @@ app.message(async ({ message, client }) => {
     
     // Upload files to Slack
     try {
-      // Upload PDF
-      const pdfResult = await client.files.uploadV2({
-        channel_id: message.channel,
-        file: await fs.readFile(pdfPath),
-        filename: 'canvas.pdf',
-        title: 'Canvas PDF'
+      // Upload the PDF to Slack
+      const result = await client.files.upload({
+        channels: message.channel,
+        file: fs.createReadStream(pdfPath),
+        filename: `pitch-deck-${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`,
+        title: 'Pitch Deck PDF',
+        initial_comment: "Here's your pitch deck PDF! 🎨"
       });
-      console.log('PDF uploaded:', pdfResult);
+      console.log('PDF uploaded:', result);
 
       // Send success message
       await client.chat.postMessage({
