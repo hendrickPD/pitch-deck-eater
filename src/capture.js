@@ -234,7 +234,8 @@ async function captureCanvas(url, browser) {
     const pdfBuffer = Buffer.from(pdfBytes);
     
     // Save the PDF file
-    const pdfPath = path.join(staticDir, `canvas-${timestamp}.pdf`);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const pdfPath = path.join(staticDir, `pitch-deck-${timestamp}.pdf`);
     await fs.writeFile(pdfPath, pdfBuffer);
     
     console.log('PDF created successfully with', pageNumber, 'pages');
