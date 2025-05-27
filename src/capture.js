@@ -216,7 +216,7 @@ async function captureCanvas(url, browser) {
         await new Promise(resolve => setTimeout(resolve, 200));
         
         // Type the email
-        await emailInput.type('abbey@palmdrive.vc', { delay: 100 });
+        await emailInput.type('dorie@palmdrive.vc', { delay: 100 });
         console.log('Email entered: abbey@palmdrive.vc');
         
         // Verify the email was entered
@@ -325,6 +325,46 @@ async function captureCanvas(url, browser) {
         // Additional wait for content to load after email submission
         await new Promise(resolve => setTimeout(resolve, 3000));
         console.log('Email form handling completed');
+        
+        // After successful email submission, ensure we're on the first slide
+        console.log('Navigating to first slide...');
+        
+        // Try multiple methods to get to the first slide
+        try {
+          // Method 1: Press Home key to go to first slide
+          await page.keyboard.press('Home');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Pressed Home key');
+        } catch (e) {
+          console.log('Home key failed:', e.message);
+        }
+        
+        try {
+          // Method 2: Press Left arrow multiple times to ensure we're at the beginning
+          for (let i = 0; i < 20; i++) {
+            await page.keyboard.press('ArrowLeft');
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+          console.log('Pressed Left arrow 20 times');
+        } catch (e) {
+          console.log('Left arrow navigation failed:', e.message);
+        }
+        
+        try {
+          // Method 3: Look for and click a "first slide" or "beginning" button
+          const firstSlideButton = await page.$('[aria-label*="first" i], [title*="first" i], [aria-label*="beginning" i]');
+          if (firstSlideButton) {
+            await firstSlideButton.click();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('Clicked first slide button');
+          }
+        } catch (e) {
+          console.log('First slide button search failed:', e.message);
+        }
+        
+        // Wait for navigation to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Navigation to first slide completed');
       } else {
         console.log('No email input found, proceeding with normal capture');
       }
