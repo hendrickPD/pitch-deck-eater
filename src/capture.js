@@ -216,7 +216,7 @@ async function captureCanvas(url, browser) {
         await new Promise(resolve => setTimeout(resolve, 200));
         
         // Type the email
-        await emailInput.type('dorie@palmdrive.vc', { delay: 100 });
+        await emailInput.type('abbey@palmdrive.vc', { delay: 100 });
         console.log('Email entered: abbey@palmdrive.vc');
         
         // Verify the email was entered
@@ -329,41 +329,117 @@ async function captureCanvas(url, browser) {
         // After successful email submission, ensure we're on the first slide
         console.log('Navigating to first slide...');
         
-        // Try multiple methods to get to the first slide
+        // Method 1: Try to modify URL to go to first slide
         try {
-          // Method 1: Press Home key to go to first slide
-          await page.keyboard.press('Home');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          console.log('Pressed Home key');
+          const currentUrl = page.url();
+          console.log('Current URL after login:', currentUrl);
+          
+          // If URL contains slide information, try to navigate to slide 1
+          if (currentUrl.includes('/slide/') || currentUrl.includes('#slide')) {
+            let firstSlideUrl = currentUrl;
+            // Replace slide number with 1
+            firstSlideUrl = firstSlideUrl.replace(/\/slide\/\d+/, '/slide/1');
+            firstSlideUrl = firstSlideUrl.replace(/#slide\d+/, '#slide1');
+            firstSlideUrl = firstSlideUrl.replace(/\/\d+$/, '/1');
+            
+            if (firstSlideUrl !== currentUrl) {
+              console.log('Navigating to first slide URL:', firstSlideUrl);
+              await page.goto(firstSlideUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              console.log('Successfully navigated to first slide URL');
+            }
+          }
         } catch (e) {
-          console.log('Home key failed:', e.message);
+          console.log('URL navigation to first slide failed:', e.message);
         }
         
+        // Method 2: Try keyboard shortcuts to go to first slide
         try {
-          // Method 2: Press Left arrow multiple times to ensure we're at the beginning
-          for (let i = 0; i < 20; i++) {
+          // Press Home key to go to first slide
+          await page.keyboard.press('Home');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('Pressed Home key');
+          
+          // Also try Ctrl+Home
+          await page.keyboard.down('Control');
+          await page.keyboard.press('Home');
+          await page.keyboard.up('Control');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('Pressed Ctrl+Home');
+        } catch (e) {
+          console.log('Home key navigation failed:', e.message);
+        }
+        
+        // Method 3: Press Left arrow multiple times to ensure we're at the beginning
+        try {
+          console.log('Pressing Left arrow multiple times to reach first slide...');
+          for (let i = 0; i < 50; i++) {
             await page.keyboard.press('ArrowLeft');
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
-          console.log('Pressed Left arrow 20 times');
+          console.log('Pressed Left arrow 50 times');
         } catch (e) {
           console.log('Left arrow navigation failed:', e.message);
         }
         
+        // Method 4: Look for and click navigation elements
         try {
-          // Method 3: Look for and click a "first slide" or "beginning" button
-          const firstSlideButton = await page.$('[aria-label*="first" i], [title*="first" i], [aria-label*="beginning" i]');
-          if (firstSlideButton) {
-            await firstSlideButton.click();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log('Clicked first slide button');
+          // Look for first slide button or slide 1 indicator
+          const firstSlideSelectors = [
+            '[aria-label*="first" i]',
+            '[title*="first" i]',
+            '[aria-label*="slide 1" i]',
+            '[title*="slide 1" i]',
+            '.slide-nav-first',
+            '.first-slide',
+            '[data-slide="1"]',
+            '[data-slide-number="1"]'
+          ];
+          
+          for (const selector of firstSlideSelectors) {
+            try {
+              const element = await page.$(selector);
+              if (element) {
+                const isVisible = await element.evaluate(el => el.offsetParent !== null);
+                if (isVisible) {
+                  await element.click();
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  console.log(`Clicked first slide element with selector: ${selector}`);
+                  break;
+                }
+              }
+            } catch (e) {
+              // Continue to next selector
+            }
           }
         } catch (e) {
           console.log('First slide button search failed:', e.message);
         }
         
+        // Method 5: Try to find and click slide thumbnails or navigation
+        try {
+          // Look for slide thumbnails or navigation that might indicate slide 1
+          const slideNavElements = await page.$$('[class*="slide"], [class*="thumb"], [class*="nav"]');
+          for (const element of slideNavElements) {
+            try {
+              const text = await element.evaluate(el => el.textContent?.trim() || '');
+              const isVisible = await element.evaluate(el => el.offsetParent !== null);
+              if (isVisible && (text === '1' || text.includes('1'))) {
+                await element.click();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                console.log('Clicked slide navigation element with text:', text);
+                break;
+              }
+            } catch (e) {
+              // Continue to next element
+            }
+          }
+        } catch (e) {
+          console.log('Slide navigation search failed:', e.message);
+        }
+        
         // Wait for navigation to complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         console.log('Navigation to first slide completed');
       } else {
         console.log('No email input found, proceeding with normal capture');
