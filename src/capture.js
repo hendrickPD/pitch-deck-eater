@@ -143,47 +143,127 @@ async function captureCanvas(url, browser) {
     try {
       console.log('Checking for email entry form...');
       
-      // Look for common email input selectors with a short timeout
-      const emailInputSelector = await Promise.race([
-        page.waitForSelector('input[type="email"]', { timeout: 3000 }).then(() => 'input[type="email"]').catch(() => null),
-        page.waitForSelector('input[placeholder*="email" i]', { timeout: 3000 }).then(() => 'input[placeholder*="email" i]').catch(() => null),
-        page.waitForSelector('input[name*="email" i]', { timeout: 3000 }).then(() => 'input[name*="email" i]').catch(() => null),
-        page.waitForSelector('input[id*="email" i]', { timeout: 3000 }).then(() => 'input[id*="email" i]').catch(() => null),
-        new Promise(resolve => setTimeout(() => resolve(null), 3000))
-      ]);
+      // Wait a bit more for dynamic content to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Get all input elements for debugging
+      const allInputs = await page.evaluate(() => {
+        const inputs = Array.from(document.querySelectorAll('input'));
+        return inputs.map(input => ({
+          type: input.type,
+          placeholder: input.placeholder || '',
+          name: input.name || '',
+          id: input.id || '',
+          className: input.className || '',
+          value: input.value || '',
+          visible: input.offsetParent !== null
+        }));
+      });
+      console.log('All inputs found:', JSON.stringify(allInputs, null, 2));
+      
+      // Look for email input with more comprehensive selectors
+      let emailInput = null;
+      
+      // Try different email input selectors
+      const emailSelectors = [
+        'input[type="email"]',
+        'input[placeholder*="email" i]',
+        'input[placeholder*="Email" i]',
+        'input[name*="email" i]',
+        'input[id*="email" i]',
+        'input[class*="email" i]',
+        'input[placeholder*="address" i]',
+        'input[placeholder*="Enter your email" i]',
+        'input[placeholder*="work email" i]',
+        'input[data-testid*="email" i]',
+        'input[aria-label*="email" i]',
+        // Generic text inputs that might be email fields
+        'input[type="text"]'
+      ];
+      
+      for (const selector of emailSelectors) {
+        try {
+          const elements = await page.$$(selector);
+          for (const element of elements) {
+            const isVisible = await element.evaluate(el => el.offsetParent !== null);
+            if (isVisible) {
+              console.log(`Found potential email input with selector: ${selector}`);
+              emailInput = element;
+              break;
+            }
+          }
+          if (emailInput) break;
+        } catch (e) {
+          console.log(`Selector ${selector} failed:`, e.message);
+        }
+      }
 
-      if (emailInputSelector) {
+      if (emailInput) {
         console.log('Email input found, attempting to fill...');
         
+        // Scroll to the input to ensure it's visible
+        await emailInput.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Clear any existing text and enter the email
-        await page.click(emailInputSelector);
+        await emailInput.click();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Select all existing text
         await page.keyboard.down('Control');
         await page.keyboard.press('KeyA');
         await page.keyboard.up('Control');
-        await page.type(emailInputSelector, 'abbey@palmdrive.vc');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Type the email
+        await emailInput.type('abbey@palmdrive.vc', { delay: 100 });
         console.log('Email entered: abbey@palmdrive.vc');
+        
+        // Verify the email was entered
+        const enteredValue = await emailInput.evaluate(el => el.value);
+        console.log('Verified email value:', enteredValue);
+        
+        // Wait a moment for any validation
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Look for and click the continue/submit button
         let continueButton = null;
         
+        // Get all buttons for debugging
+        const allButtons = await page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], [role="button"]'));
+          return buttons.map(button => ({
+            textContent: button.textContent?.trim() || '',
+            type: button.type || '',
+            className: button.className || '',
+            visible: button.offsetParent !== null,
+            tagName: button.tagName
+          }));
+        });
+        console.log('All buttons found:', JSON.stringify(allButtons, null, 2));
+        
         try {
-          // Try to find button by text content using XPath
-          const buttons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "agree and continue")]');
-          if (buttons.length > 0) {
-            continueButton = buttons[0];
+          // Try to find button by text content using XPath (case-insensitive)
+          const agreeButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "agree and continue")]');
+          if (agreeButtons.length > 0) {
+            continueButton = agreeButtons[0];
             console.log('Found "agree and continue" button via XPath');
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log('XPath search for "agree and continue" failed:', e.message);
+        }
         
         if (!continueButton) {
           try {
             // Try other button text variations
-            const buttons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
-            if (buttons.length > 0) {
-              continueButton = buttons[0];
+            const continueButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
+            if (continueButtons.length > 0) {
+              continueButton = continueButtons[0];
               console.log('Found "continue" button via XPath');
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log('XPath search for "continue" failed:', e.message);
+          }
         }
         
         if (!continueButton) {
@@ -193,7 +273,9 @@ async function captureCanvas(url, browser) {
             if (continueButton) {
               console.log('Found submit button');
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log('Submit button search failed:', e.message);
+          }
         }
         
         if (!continueButton) {
@@ -203,7 +285,27 @@ async function captureCanvas(url, browser) {
             if (continueButton) {
               console.log('Found input submit');
             }
-          } catch (e) {}
+          } catch (e) {
+            console.log('Input submit search failed:', e.message);
+          }
+        }
+        
+        // Try to find any button that might be the submit button
+        if (!continueButton) {
+          try {
+            const buttons = await page.$$('button');
+            for (const button of buttons) {
+              const isVisible = await button.evaluate(el => el.offsetParent !== null);
+              const text = await button.evaluate(el => el.textContent?.trim().toLowerCase() || '');
+              if (isVisible && (text.includes('continue') || text.includes('submit') || text.includes('agree') || text.includes('enter'))) {
+                continueButton = button;
+                console.log(`Found button with text: "${text}"`);
+                break;
+              }
+            }
+          } catch (e) {
+            console.log('Generic button search failed:', e.message);
+          }
         }
 
         if (continueButton) {
@@ -212,16 +314,16 @@ async function captureCanvas(url, browser) {
           console.log('Continue button clicked');
           
           // Wait for navigation/form submission to complete
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
           console.log('Waited for form submission to complete');
         } else {
           console.log('Continue button not found, trying Enter key...');
           await page.keyboard.press('Enter');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
         
         // Additional wait for content to load after email submission
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         console.log('Email form handling completed');
       } else {
         console.log('No email input found, proceeding with normal capture');
