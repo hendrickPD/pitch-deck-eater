@@ -139,6 +139,98 @@ async function captureCanvas(url, browser) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     console.log('Initial wait complete');
 
+    // Check for email entry form and handle it if present
+    try {
+      console.log('Checking for email entry form...');
+      
+      // Look for common email input selectors with a short timeout
+      const emailInputSelector = await Promise.race([
+        page.waitForSelector('input[type="email"]', { timeout: 3000 }).then(() => 'input[type="email"]').catch(() => null),
+        page.waitForSelector('input[placeholder*="email" i]', { timeout: 3000 }).then(() => 'input[placeholder*="email" i]').catch(() => null),
+        page.waitForSelector('input[name*="email" i]', { timeout: 3000 }).then(() => 'input[name*="email" i]').catch(() => null),
+        page.waitForSelector('input[id*="email" i]', { timeout: 3000 }).then(() => 'input[id*="email" i]').catch(() => null),
+        new Promise(resolve => setTimeout(() => resolve(null), 3000))
+      ]);
+
+      if (emailInputSelector) {
+        console.log('Email input found, attempting to fill...');
+        
+        // Clear any existing text and enter the email
+        await page.click(emailInputSelector);
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await page.type(emailInputSelector, 'abbey@palmdrive.vc');
+        console.log('Email entered: abbey@palmdrive.vc');
+        
+        // Look for and click the continue/submit button
+        let continueButton = null;
+        
+        try {
+          // Try to find button by text content using XPath
+          const buttons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "agree and continue")]');
+          if (buttons.length > 0) {
+            continueButton = buttons[0];
+            console.log('Found "agree and continue" button via XPath');
+          }
+        } catch (e) {}
+        
+        if (!continueButton) {
+          try {
+            // Try other button text variations
+            const buttons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
+            if (buttons.length > 0) {
+              continueButton = buttons[0];
+              console.log('Found "continue" button via XPath');
+            }
+          } catch (e) {}
+        }
+        
+        if (!continueButton) {
+          try {
+            // Try submit button
+            continueButton = await page.$('button[type="submit"]');
+            if (continueButton) {
+              console.log('Found submit button');
+            }
+          } catch (e) {}
+        }
+        
+        if (!continueButton) {
+          try {
+            // Try input submit
+            continueButton = await page.$('input[type="submit"]');
+            if (continueButton) {
+              console.log('Found input submit');
+            }
+          } catch (e) {}
+        }
+
+        if (continueButton) {
+          console.log('Continue button found, clicking...');
+          await continueButton.click();
+          console.log('Continue button clicked');
+          
+          // Wait for navigation/form submission to complete
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          console.log('Waited for form submission to complete');
+        } else {
+          console.log('Continue button not found, trying Enter key...');
+          await page.keyboard.press('Enter');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        
+        // Additional wait for content to load after email submission
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('Email form handling completed');
+      } else {
+        console.log('No email input found, proceeding with normal capture');
+      }
+    } catch (emailError) {
+      console.log('Email entry failed or timed out, proceeding with normal capture:', emailError.message);
+      // Continue with normal workflow even if email entry fails
+    }
+
     // Ensure we're in landscape mode
     await page.setViewport({
       width: 1920,
