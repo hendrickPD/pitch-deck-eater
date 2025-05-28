@@ -400,8 +400,10 @@ async function captureCanvas(url, browser) {
     const jpegBuffers = [];
     let pageNumber = 1;
     let hasNextPage = true;
+    const maxPages = 50; // Safety limit to prevent infinite loops
+    const seenScreenshots = new Map(); // Track screenshots we've seen before
 
-    while (hasNextPage) {
+    while (hasNextPage && pageNumber <= maxPages) {
       console.log(`Processing page ${pageNumber}...`);
       
       // Wait 2 seconds before taking screenshot (1 second was already there, adding 1 more)
@@ -414,8 +416,21 @@ async function captureCanvas(url, browser) {
         quality: 100,
         fullPage: true
       });
+      
+      // Create a hash of the screenshot to detect duplicates
+      const screenshotHash = require('crypto').createHash('md5').update(jpegBuffer).digest('hex');
+      
+      // Check if we've seen this screenshot before (indicating we've cycled back)
+      if (seenScreenshots.has(screenshotHash)) {
+        console.log(`Duplicate screenshot detected (hash: ${screenshotHash}), ending capture`);
+        hasNextPage = false;
+        break;
+      }
+      
+      // Store the screenshot hash and buffer
+      seenScreenshots.set(screenshotHash, pageNumber);
       jpegBuffers.push(jpegBuffer);
-      console.log(`Screenshot taken for page ${pageNumber}`);
+      console.log(`Screenshot taken for page ${pageNumber} (hash: ${screenshotHash.substring(0, 8)}...)`);
       
       // Wait 1 second after taking screenshot
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -439,18 +454,21 @@ async function captureCanvas(url, browser) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Waited 1 second for content to settle');
         
-        // Check if we're still on the same page by comparing screenshots
+        // Take a quick screenshot to compare
         const newJpegBuffer = await page.screenshot({
           type: 'jpeg',
           quality: 100,
           fullPage: true
         });
         
-        // Compare the new screenshot with the previous one
-        const isSamePage = Buffer.compare(jpegBuffer, newJpegBuffer) === 0;
+        const newScreenshotHash = require('crypto').createHash('md5').update(newJpegBuffer).digest('hex');
         
-        if (isSamePage) {
-          console.log('No more pages detected');
+        // Check if this new screenshot is the same as the previous one (no navigation occurred)
+        if (newScreenshotHash === screenshotHash) {
+          console.log('No navigation occurred (same screenshot), ending capture');
+          hasNextPage = false;
+        } else if (seenScreenshots.has(newScreenshotHash)) {
+          console.log(`Navigation cycled back to previously seen slide (hash: ${newScreenshotHash}), ending capture`);
           hasNextPage = false;
         } else {
           console.log('New page detected, continuing...');
@@ -463,7 +481,11 @@ async function captureCanvas(url, browser) {
       }
     }
     
-    console.log(`Captured ${pageNumber} pages`);
+    if (pageNumber > maxPages) {
+      console.log(`Reached maximum page limit of ${maxPages}, ending capture`);
+    }
+    
+    console.log(`Captured ${jpegBuffers.length} unique pages`);
     
     // Create PDF from all screenshots
     const pdfDoc = await PDFDocument.create();
