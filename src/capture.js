@@ -342,11 +342,11 @@ async function captureCanvas(url, browser) {
         // Method 2: Press Left arrow multiple times to ensure we're at the beginning
         try {
           console.log('Pressing Left arrow to reach first slide...');
-          for (let i = 0; i < 20; i++) {
+          for (let i = 0; i < 50; i++) {
             await page.keyboard.press('ArrowLeft');
             await new Promise(resolve => setTimeout(resolve, 50));
           }
-          console.log('Pressed Left arrow 20 times');
+          console.log('Pressed Left arrow 50 times');
         } catch (e) {
           console.log('Left arrow navigation failed:', e.message);
         }
@@ -379,6 +379,19 @@ async function captureCanvas(url, browser) {
         // Wait for navigation to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Navigation to first slide completed');
+        
+        // Verification: Take a screenshot to see where we actually are
+        try {
+          const verificationScreenshot = await page.screenshot({
+            type: 'jpeg',
+            quality: 100,
+            fullPage: true
+          });
+          const verificationHash = require('crypto').createHash('md5').update(verificationScreenshot).digest('hex');
+          console.log(`Current position after navigation (hash: ${verificationHash.substring(0, 8)}...)`);
+        } catch (e) {
+          console.log('Verification screenshot failed:', e.message);
+        }
       } else {
         console.log('No email input found, proceeding with normal capture');
       }
