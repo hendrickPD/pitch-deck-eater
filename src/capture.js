@@ -139,9 +139,9 @@ async function captureCanvas(url, browser) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     console.log('Initial wait complete');
 
-    // Check for email entry form and handle it if present
+    // Check for passcode/email entry form and handle it if present
     try {
-      console.log('Checking for email entry form...');
+      console.log('Checking for passcode/email entry form...');
       
       // Wait a bit more for dynamic content to load
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -161,72 +161,63 @@ async function captureCanvas(url, browser) {
       });
       console.log('All inputs found:', JSON.stringify(allInputs, null, 2));
       
-      // Look for email input with more comprehensive selectors
-      let emailInput = null;
+      // First check for passcode input
+      let passcodeInput = null;
       
-      // Try different email input selectors
-      const emailSelectors = [
-        'input[type="email"]',
-        'input[placeholder*="email" i]',
-        'input[placeholder*="Email" i]',
-        'input[name*="email" i]',
-        'input[id*="email" i]',
-        'input[class*="email" i]',
-        'input[placeholder*="address" i]',
-        'input[placeholder*="Enter your email" i]',
-        'input[placeholder*="work email" i]',
-        'input[data-testid*="email" i]',
-        'input[aria-label*="email" i]',
-        // Generic text inputs that might be email fields
-        'input[type="text"]'
+      const passcodeSelectors = [
+        'input[placeholder*="passcode" i]',
+        'input[placeholder*="password" i]',
+        'input[name*="passcode" i]',
+        'input[type="password"]',
+        'input[type="text"]' // Passcode fields are often just text inputs
       ];
       
-      for (const selector of emailSelectors) {
+      for (const selector of passcodeSelectors) {
         try {
           const elements = await page.$$(selector);
           for (const element of elements) {
             const isVisible = await element.evaluate(el => el.offsetParent !== null);
             if (isVisible) {
-              console.log(`Found potential email input with selector: ${selector}`);
-              emailInput = element;
+              console.log(`Found potential passcode input with selector: ${selector}`);
+              passcodeInput = element;
               break;
             }
           }
-          if (emailInput) break;
+          if (passcodeInput) break;
         } catch (e) {
-          console.log(`Selector ${selector} failed:`, e.message);
+          console.log(`Passcode selector ${selector} failed:`, e.message);
         }
       }
 
-      if (emailInput) {
-        console.log('Email input found, attempting to fill...');
+      if (passcodeInput) {
+        console.log('Passcode input found, attempting to fill...');
         
         // Scroll to the input to ensure it's visible
-        await emailInput.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        await passcodeInput.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Clear any existing text and enter the email
-        await emailInput.click();
+        // Clear and enter the passcode
+        await passcodeInput.click();
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Select all existing text
+        // Clear existing text
         await page.keyboard.down('Control');
         await page.keyboard.press('KeyA');
         await page.keyboard.up('Control');
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Type the email
-        await emailInput.type('abbey@palmdrive.vc', { delay: 100 });
-        console.log('Email entered: abbey@palmdrive.vc');
+        // Type the passcode
+        await passcodeInput.type('palmdrive', { delay: 100 });
+        console.log('Passcode entered: palmdrive');
         
-        // Verify the email was entered
-        const enteredValue = await emailInput.evaluate(el => el.value);
-        console.log('Verified email value:', enteredValue);
+        // Verify the passcode was entered
+        const enteredValue = await passcodeInput.evaluate(el => el.value);
+        console.log('Verified passcode value:', enteredValue);
         
-        // Wait a moment for any validation
+        // Wait for validation
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Look for and click the continue/submit button
+        // Find and click continue button
         let continueButton = null;
         
         // Get all buttons for debugging
@@ -243,95 +234,46 @@ async function captureCanvas(url, browser) {
         console.log('All buttons found:', JSON.stringify(allButtons, null, 2));
         
         try {
-          // Try to find button by text content using XPath (case-insensitive)
-          const agreeButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "agree and continue")]');
-          if (agreeButtons.length > 0) {
-            continueButton = agreeButtons[0];
-            console.log('Found "agree and continue" button via XPath');
+          const continueButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
+          if (continueButtons.length > 0) {
+            continueButton = continueButtons[0];
+            console.log('Found "continue" button via XPath');
           }
         } catch (e) {
-          console.log('XPath search for "agree and continue" failed:', e.message);
+          console.log('XPath search failed:', e.message);
         }
         
         if (!continueButton) {
-          try {
-            // Try other button text variations
-            const continueButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
-            if (continueButtons.length > 0) {
-              continueButton = continueButtons[0];
-              console.log('Found "continue" button via XPath');
+          const buttons = await page.$$('button');
+          for (const button of buttons) {
+            const isVisible = await button.evaluate(el => el.offsetParent !== null);
+            if (isVisible) {
+              continueButton = button;
+              console.log('Found visible button');
+              break;
             }
-          } catch (e) {
-            console.log('XPath search for "continue" failed:', e.message);
-          }
-        }
-        
-        if (!continueButton) {
-          try {
-            // Try submit button
-            continueButton = await page.$('button[type="submit"]');
-            if (continueButton) {
-              console.log('Found submit button');
-            }
-          } catch (e) {
-            console.log('Submit button search failed:', e.message);
-          }
-        }
-        
-        if (!continueButton) {
-          try {
-            // Try input submit
-            continueButton = await page.$('input[type="submit"]');
-            if (continueButton) {
-              console.log('Found input submit');
-            }
-          } catch (e) {
-            console.log('Input submit search failed:', e.message);
-          }
-        }
-        
-        // Try to find any button that might be the submit button
-        if (!continueButton) {
-          try {
-            const buttons = await page.$$('button');
-            for (const button of buttons) {
-              const isVisible = await button.evaluate(el => el.offsetParent !== null);
-              const text = await button.evaluate(el => el.textContent?.trim().toLowerCase() || '');
-              if (isVisible && (text.includes('continue') || text.includes('submit') || text.includes('agree') || text.includes('enter'))) {
-                continueButton = button;
-                console.log(`Found button with text: "${text}"`);
-                break;
-              }
-            }
-          } catch (e) {
-            console.log('Generic button search failed:', e.message);
           }
         }
 
         if (continueButton) {
-          console.log('Continue button found, clicking...');
+          console.log('Clicking continue button...');
           await continueButton.click();
-          console.log('Continue button clicked');
-          
-          // Wait for navigation/form submission to complete
           await new Promise(resolve => setTimeout(resolve, 5000));
-          console.log('Waited for form submission to complete');
+          console.log('Passcode submitted, waiting for presentation to load...');
         } else {
-          console.log('Continue button not found, trying Enter key...');
+          console.log('No continue button found, trying Enter key...');
           await page.keyboard.press('Enter');
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
         
-        // Additional wait for content to load after email submission
+        // Wait for presentation to fully load
         await new Promise(resolve => setTimeout(resolve, 3000));
-        console.log('Email form handling completed');
+        console.log('Presentation should now be loaded');
         
-        // After successful email submission, ensure we're on the first slide
+        // Navigate to first slide after passcode entry
         console.log('Navigating to first slide...');
         
-        // Method 1: Try keyboard shortcuts first (most reliable)
         try {
-          // Press Home key to go to first slide
           await page.keyboard.press('Home');
           await new Promise(resolve => setTimeout(resolve, 500));
           console.log('Pressed Home key');
@@ -339,7 +281,6 @@ async function captureCanvas(url, browser) {
           console.log('Home key navigation failed:', e.message);
         }
         
-        // Method 2: Press Left arrow multiple times to ensure we're at the beginning
         try {
           console.log('Pressing Left arrow to reach first slide...');
           for (let i = 0; i < 20; i++) {
@@ -351,36 +292,229 @@ async function captureCanvas(url, browser) {
           console.log('Left arrow navigation failed:', e.message);
         }
         
-        // Method 3: Look for specific slide 1 navigation (more targeted)
-        try {
-          // Look for elements that are exactly "1" or have slide 1 indicators
-          const slideElements = await page.$$('button, a, [role="button"], [class*="slide"], [class*="nav"]');
-          for (const element of slideElements) {
-            try {
-              const text = await element.evaluate(el => el.textContent?.trim() || '');
-              const isVisible = await element.evaluate(el => el.offsetParent !== null);
-              const ariaLabel = await element.evaluate(el => el.getAttribute('aria-label') || '');
-              
-              // Only click if it's exactly "1" or clearly indicates slide 1
-              if (isVisible && (text === '1' || ariaLabel.toLowerCase().includes('slide 1') || ariaLabel.toLowerCase().includes('first slide'))) {
-                await element.click();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                console.log(`Clicked slide 1 element with text: "${text}" and aria-label: "${ariaLabel}"`);
-                break;
-              }
-            } catch (e) {
-              // Continue to next element
-            }
-          }
-        } catch (e) {
-          console.log('Slide 1 navigation search failed:', e.message);
-        }
-        
-        // Wait for navigation to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Navigation to first slide completed');
+        
       } else {
-        console.log('No email input found, proceeding with normal capture');
+        // Look for email input with more comprehensive selectors
+        let emailInput = null;
+        
+        // Try different email input selectors
+        const emailSelectors = [
+          'input[type="email"]',
+          'input[placeholder*="email" i]',
+          'input[placeholder*="Email" i]',
+          'input[name*="email" i]',
+          'input[id*="email" i]',
+          'input[class*="email" i]',
+          'input[placeholder*="address" i]',
+          'input[placeholder*="Enter your email" i]',
+          'input[placeholder*="work email" i]',
+          'input[data-testid*="email" i]',
+          'input[aria-label*="email" i]',
+          // Generic text inputs that might be email fields
+          'input[type="text"]'
+        ];
+        
+        for (const selector of emailSelectors) {
+          try {
+            const elements = await page.$$(selector);
+            for (const element of elements) {
+              const isVisible = await element.evaluate(el => el.offsetParent !== null);
+              if (isVisible) {
+                console.log(`Found potential email input with selector: ${selector}`);
+                emailInput = element;
+                break;
+              }
+            }
+            if (emailInput) break;
+          } catch (e) {
+            console.log(`Selector ${selector} failed:`, e.message);
+          }
+        }
+
+        if (emailInput) {
+          console.log('Email input found, attempting to fill...');
+          
+          // Scroll to the input to ensure it's visible
+          await emailInput.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Clear any existing text and enter the email
+          await emailInput.click();
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Select all existing text
+          await page.keyboard.down('Control');
+          await page.keyboard.press('KeyA');
+          await page.keyboard.up('Control');
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Type the email
+          await emailInput.type('abbey@palmdrive.vc', { delay: 100 });
+          console.log('Email entered: abbey@palmdrive.vc');
+          
+          // Verify the email was entered
+          const enteredValue = await emailInput.evaluate(el => el.value);
+          console.log('Verified email value:', enteredValue);
+          
+          // Wait a moment for any validation
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Look for and click the continue/submit button
+          let continueButton = null;
+          
+          // Get all buttons for debugging
+          const allButtons = await page.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], [role="button"]'));
+            return buttons.map(button => ({
+              textContent: button.textContent?.trim() || '',
+              type: button.type || '',
+              className: button.className || '',
+              visible: button.offsetParent !== null,
+              tagName: button.tagName
+            }));
+          });
+          console.log('All buttons found:', JSON.stringify(allButtons, null, 2));
+          
+          try {
+            // Try to find button by text content using XPath (case-insensitive)
+            const agreeButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "agree and continue")]');
+            if (agreeButtons.length > 0) {
+              continueButton = agreeButtons[0];
+              console.log('Found "agree and continue" button via XPath');
+            }
+          } catch (e) {
+            console.log('XPath search for "agree and continue" failed:', e.message);
+          }
+          
+          if (!continueButton) {
+            try {
+              // Try other button text variations
+              const continueButtons = await page.$x('//button[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "continue")]');
+              if (continueButtons.length > 0) {
+                continueButton = continueButtons[0];
+                console.log('Found "continue" button via XPath');
+              }
+            } catch (e) {
+              console.log('XPath search for "continue" failed:', e.message);
+            }
+          }
+          
+          if (!continueButton) {
+            try {
+              // Try submit button
+              continueButton = await page.$('button[type="submit"]');
+              if (continueButton) {
+                console.log('Found submit button');
+              }
+            } catch (e) {
+              console.log('Submit button search failed:', e.message);
+            }
+          }
+          
+          if (!continueButton) {
+            try {
+              // Try input submit
+              continueButton = await page.$('input[type="submit"]');
+              if (continueButton) {
+                console.log('Found input submit');
+              }
+            } catch (e) {
+              console.log('Input submit search failed:', e.message);
+            }
+          }
+          
+          // Try to find any button that might be the submit button
+          if (!continueButton) {
+            try {
+              const buttons = await page.$$('button');
+              for (const button of buttons) {
+                const isVisible = await button.evaluate(el => el.offsetParent !== null);
+                const text = await button.evaluate(el => el.textContent?.trim().toLowerCase() || '');
+                if (isVisible && (text.includes('continue') || text.includes('submit') || text.includes('agree') || text.includes('enter'))) {
+                  continueButton = button;
+                  console.log(`Found button with text: "${text}"`);
+                  break;
+                }
+              }
+            } catch (e) {
+              console.log('Generic button search failed:', e.message);
+            }
+          }
+
+          if (continueButton) {
+            console.log('Continue button found, clicking...');
+            await continueButton.click();
+            console.log('Continue button clicked');
+            
+            // Wait for navigation/form submission to complete
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            console.log('Waited for form submission to complete');
+          } else {
+            console.log('Continue button not found, trying Enter key...');
+            await page.keyboard.press('Enter');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          
+          // Additional wait for content to load after email submission
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          console.log('Email form handling completed');
+          
+          // After successful email submission, ensure we're on the first slide
+          console.log('Navigating to first slide...');
+          
+          // Method 1: Try keyboard shortcuts first (most reliable)
+          try {
+            // Press Home key to go to first slide
+            await page.keyboard.press('Home');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('Pressed Home key');
+          } catch (e) {
+            console.log('Home key navigation failed:', e.message);
+          }
+          
+          // Method 2: Press Left arrow multiple times to ensure we're at the beginning
+          try {
+            console.log('Pressing Left arrow to reach first slide...');
+            for (let i = 0; i < 20; i++) {
+              await page.keyboard.press('ArrowLeft');
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            console.log('Pressed Left arrow 20 times');
+          } catch (e) {
+            console.log('Left arrow navigation failed:', e.message);
+          }
+          
+          // Method 3: Look for specific slide 1 navigation (more targeted)
+          try {
+            // Look for elements that are exactly "1" or have slide 1 indicators
+            const slideElements = await page.$$('button, a, [role="button"], [class*="slide"], [class*="nav"]');
+            for (const element of slideElements) {
+              try {
+                const text = await element.evaluate(el => el.textContent?.trim() || '');
+                const isVisible = await element.evaluate(el => el.offsetParent !== null);
+                const ariaLabel = await element.evaluate(el => el.getAttribute('aria-label') || '');
+                
+                // Only click if it's exactly "1" or clearly indicates slide 1
+                if (isVisible && (text === '1' || ariaLabel.toLowerCase().includes('slide 1') || ariaLabel.toLowerCase().includes('first slide'))) {
+                  await element.click();
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  console.log(`Clicked slide 1 element with text: "${text}" and aria-label: "${ariaLabel}"`);
+                  break;
+                }
+              } catch (e) {
+                // Continue to next element
+              }
+            }
+          } catch (e) {
+            console.log('Slide 1 navigation search failed:', e.message);
+          }
+          
+          // Wait for navigation to complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('Navigation to first slide completed');
+        }
       }
     } catch (emailError) {
       console.log('Email entry failed or timed out, proceeding with normal capture:', emailError.message);
